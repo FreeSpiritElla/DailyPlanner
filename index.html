@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f8f7f3">
+<title>Daily Planner</title>
+<style>
+:root{
+  --bg:#f8f7f3;
+  --surface:#fff;
+  --ink:#1f3b33;
+  --soft:#66736d;
+  --faint:#9aa39f;
+  --line:#e3e2dc;
+  --accent:#2f5d50;
+  --accent-soft:#edf2ef;
+
+  --a:#b74d4d;
+  --b:#c79a2e;
+  --c:#4f8b67;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Apple SD Gothic Neo','Malgun Gothic','Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:680px;margin:0 auto;padding:14px 12px 32px}
+.header{
+  position:sticky;top:0;z-index:20;
+  background:rgba(248,247,243,.96);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  padding:8px 0 10px;
+}
+h1{margin:0 0 2px;font-size:21px;letter-spacing:1px}
+.subtitle{margin:0 0 10px;font-size:12px;color:var(--soft)}
+.date-row{display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:center}
+.date-row button{
+  width:40px;height:40px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);color:var(--ink);font-size:22px
+}
+.date-pill{
+  min-height:40px;display:flex;align-items:center;justify-content:center;
+  background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:6px 10px
+}
+.date-pill input{
+  width:100%;border:0;background:transparent;color:var(--ink);font:700 15px inherit;text-align:center
+}
+.saved{height:14px;text-align:right;font-size:10.5px;color:var(--faint);margin-bottom:4px}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:13px 14px;margin-bottom:10px
+}
+.card h2{margin:0 0 10px;font-size:13px}
+.goal-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.goal-row:last-child{margin-bottom:0}
+.num{
+  width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;font-size:11px;font-weight:800;flex:0 0 24px
+}
+.goal-row input{
+  flex:1;min-width:0;border:0;border-bottom:1px solid var(--line);background:transparent;
+  font:16px inherit;color:var(--ink);padding:7px 2px
+}
+.goal-row input:focus{outline:none;border-bottom-color:var(--accent)}
+
+details.rules summary{
+  list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  font-size:13px;font-weight:800
+}
+details.rules summary::-webkit-details-marker{display:none}
+.chev{font-size:18px;color:var(--faint);transition:.2s}
+details[open] .chev{transform:rotate(180deg)}
+.rules ol{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:7px}
+.rules li{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--soft)}
+.rules li .num{width:18px;height:18px;flex-basis:18px;background:var(--ink);font-size:10px}
+
+.priority-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--soft)}
+.priority-chip{
+  width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;font-size:10px;font-weight:800
+}
+.priority-chip.a{background:var(--a)}
+.priority-chip.b{background:var(--b)}
+.priority-chip.c{background:var(--c)}
+
+.timeline{display:flex;flex-direction:column;gap:9px}
+.block-list{display:flex;flex-direction:column;gap:9px}
+.task-block{
+  position:relative;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);
+  border-radius:12px;padding:10px 10px 11px
+}
+.task-block.type-a{border-left-color:var(--a)}
+.task-block.type-b{border-left-color:var(--b)}
+.task-block.type-c{border-left-color:var(--c)}
+.task-block.type-a .num{background:var(--a)}
+.task-block.type-b .num{background:var(--b)}
+.task-block.type-c .num{background:var(--c)}
+
+.block-head{display:flex;align-items:center;gap:6px;padding-right:18px}
+.block-head input[type=time]{
+  flex:1 1 0;min-width:0;border:1px solid var(--line);border-radius:8px;
+  padding:6px 3px;background:#fcfcfa;color:var(--ink);font:13px inherit
+}
+.sep{color:var(--faint);font-size:12px;flex:0 0 auto}
+.priority-select{display:flex;gap:5px;margin-left:auto;flex:0 0 auto}
+.priority-btn{
+  width:24px;height:24px;border-radius:50%;border:2px solid transparent;padding:0;opacity:.38;cursor:pointer
+}
+.priority-btn.a{background:var(--a)}
+.priority-btn.b{background:var(--b)}
+.priority-btn.c{background:var(--c)}
+.priority-btn.active{opacity:1;box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(31,59,51,.15)}
+.del-btn{
+  position:absolute;right:4px;top:4px;width:20px;height:20px;border:0;background:transparent;
+  color:var(--faint);font-size:16px;line-height:1;padding:0
+}
+.task-input{
+  width:100%;min-height:54px;border:0;resize:vertical;background:transparent;color:var(--ink);
+  font:16px/1.45 inherit;padding:7px 2px 0
+}
+.task-input:focus{outline:none}
+.task-input::placeholder{color:var(--faint)}
+.completion{
+  display:none;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line)
+}
+.task-block.type-a .completion,.task-block.type-b .completion{display:block}
+.completion label{display:block;font-size:11px;font-weight:700;color:var(--soft);margin-bottom:3px}
+.completion input{
+  width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;
+  color:var(--ink);font:14px inherit;padding:5px 2px
+}
+.completion input:focus{outline:none;border-bottom-color:var(--accent)}
+
+.lunch{
+  display:flex;align-items:center;gap:6px;background:#f2ede6;border:1px solid #e6ddcf;
+  border-radius:12px;padding:10px 12px;color:#826a4c
+}
+.lunch .label{font-size:12px;font-weight:800;flex:0 0 auto}
+.lunch input{
+  flex:1 1 0;width:0;min-width:0;border:1px solid #e6ddcf;border-radius:8px;
+  background:#fffdf9;color:#826a4c;font:13px inherit;padding:7px 3px
+}
+.add-btn{
+  width:100%;min-height:42px;border:1px dashed var(--line);border-radius:10px;
+  background:transparent;color:var(--soft);font:13px inherit
+}
+
+.parking{margin-top:10px}
+.parking-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.parking-head h2{margin:0}
+.parking-actions{display:flex;gap:6px}
+.parking-actions button{
+  width:30px;height:30px;border:1px solid var(--line);border-radius:7px;background:#fcfcfa;
+  color:var(--soft);font-size:17px
+}
+.parking-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.parking-row:last-child{margin-bottom:0}
+.parking-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);flex:0 0 auto}
+.parking-row input[type=text]{
+  flex:1;min-width:0;border:0;border-bottom:1px solid var(--line);background:transparent;
+  color:var(--ink);font:15px inherit;padding:6px 2px
+}
+.parking-row.done input[type=text]{text-decoration:line-through;color:var(--faint)}
+.parking-del{
+  width:24px;height:24px;border:0;background:transparent;color:var(--faint);font-size:16px
+}
+@media(min-width:701px){
+  .wrap{padding-top:24px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>DAILY PLANNER</h1>
+    <p class="subtitle">오늘도, 중요한 일에 집중.</p>
+    <div class="saved" id="saved"></div>
+    <div class="date-row">
+      <button id="prevDay">‹</button>
+      <div class="date-pill"><input type="date" id="dateInput"></div>
+      <button id="nextDay">›</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>오늘의 핵심 목표 <span style="font-weight:400;color:var(--faint)">(최대 2개)</span></h2>
+    <div class="goal-row"><span class="num">1</span><input id="goal0" type="text" placeholder="핵심 목표 1"></div>
+    <div class="goal-row"><span class="num">2</span><input id="goal1" type="text" placeholder="핵심 목표 2"></div>
+  </div>
+
+  <details class="card rules">
+    <summary><span>플래닝 규칙</span><span class="chev">⌄</span></summary>
+    <ol>
+      <li><span class="num">1</span>핵심 할 일은 하루 최대 2개</li>
+      <li><span class="num">2</span>핵심 할 일부터 시간에 박는다</li>
+      <li><span class="num">3</span>할 일명보다 완료 조건을 쓴다</li>
+      <li><span class="num">4</span>시작하면 일단 10분 한다</li>
+      <li><span class="num">5</span>생각난 잡일은 바로 하지 않는다</li>
+      <li><span class="num">6</span>계획 세우기는 5분 제한</li>
+    </ol>
+  </details>
+
+  <div class="card">
+    <h2>할 일 분류</h2>
+    <div class="priority-row">
+      <span class="priority-chip a">A</span><span>중요 · 긴급</span>
+      <span class="priority-chip b">B</span><span>중요 · 비긴급</span>
+      <span class="priority-chip c">C</span><span>중요도 낮음</span>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="block-list" id="amBlocks"></div>
+    <button class="add-btn" id="addAM">+ 오전 할 일 블록 추가</button>
+
+    <div class="lunch">
+      <span class="label">점심시간</span>
+      <input type="time" id="lunchStart">
+      <span class="sep">–</span>
+      <input type="time" id="lunchEnd">
+    </div>
+
+    <div class="block-list" id="pmBlocks"></div>
+    <button class="add-btn" id="addPM">+ 오후 할 일 블록 추가</button>
+
+    <div class="card parking">
+      <div class="parking-head">
+        <h2>잡일</h2>
+        <div class="parking-actions">
+          <button id="removeParking" type="button" aria-label="잡일 한 줄 줄이기">−</button>
+          <button id="addParking" type="button" aria-label="잡일 한 줄 추가">＋</button>
+        </div>
+      </div>
+      <div id="parkingList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const TYPES=['a','b','c'];
+
+  function todayStr(){
+    const d=new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function shiftDate(s,delta){
+    const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+delta);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function freshBlock(start='',end='',type='',task=''){return {start,end,type,task,completion:''}}
+  function defaultState(){
+    return {
+      goals:['',''],
+      lunch:{start:'12:00',end:'13:00'},
+      blocksAM:[
+        freshBlock('10:00','10:20','',''),
+        freshBlock('10:20','11:00','','')
+      ],
+      blocksPM:[
+        freshBlock('13:00','14:00','',''),
+        freshBlock('14:00','15:00','',''),
+        freshBlock('15:00','16:00','',''),
+        freshBlock('16:00','17:00','',''),
+        freshBlock('17:00','18:30','',''),
+        freshBlock('18:30','19:00','','')
+      ],
+      parking:[{text:'',done:false},{text:'',done:false}]
+    };
+  }
+
+  let currentDate=todayStr();
+  let state=defaultState();
+  let saveTimer=null;
+
+  const storageOK=(()=>{
+    try{
+      localStorage.setItem('__dp_test__','1');
+      localStorage.removeItem('__dp_test__');
+      return true;
+    }catch(e){return false}
+  })();
+
+  function key(d){return 'dailyplan-'+d}
+  function merge(loaded){
+    const base=defaultState();
+    const cleanBlocks=(arr,fallback)=>Array.isArray(arr)&&arr.length?arr.map(b=>({
+      start:typeof b.start==='string'?b.start:'',
+      end:typeof b.end==='string'?b.end:'',
+      type:TYPES.includes(b.type)?b.type:'',
+      task:typeof b.task==='string'?b.task:'',
+      completion:typeof b.completion==='string'?b.completion:''
+    })):fallback;
+    return {
+      goals:Array.isArray(loaded?.goals)&&loaded.goals.length===2?loaded.goals:base.goals,
+      lunch:loaded?.lunch?{
+        start:typeof loaded.lunch.start==='string'?loaded.lunch.start:base.lunch.start,
+        end:typeof loaded.lunch.end==='string'?loaded.lunch.end:base.lunch.end
+      }:base.lunch,
+      blocksAM:cleanBlocks(loaded?.blocksAM,base.blocksAM),
+      blocksPM:cleanBlocks(loaded?.blocksPM,base.blocksPM),
+      parking:Array.isArray(loaded?.parking)&&loaded.parking.length?loaded.parking.map(p=>({
+        text:typeof p.text==='string'?p.text:'',
+        done:!!p.done
+      })):base.parking
+    };
+  }
+  function load(){
+    if(storageOK){
+      const raw=localStorage.getItem(key(currentDate));
+      state=raw?merge(JSON.parse(raw)):defaultState();
+    }else state=defaultState();
+    render();
+  }
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(save,300);
+  }
+  function save(){
+    if(storageOK){
+      localStorage.setItem(key(currentDate),JSON.stringify(state));
+      const s=document.getElementById('saved'); s.textContent='저장됨';
+      clearTimeout(save._t); save._t=setTimeout(()=>s.textContent='',1200);
+    }
+  }
+
+  function render(){
+    dateInput.value=currentDate;
+    goal0.value=state.goals[0]||'';
+    goal1.value=state.goals[1]||'';
+    lunchStart.value=state.lunch.start||'12:00';
+    lunchEnd.value=state.lunch.end||'13:00';
+    renderBlocks();
+    renderParking();
+  }
+  function renderBlocks(){
+    amBlocks.innerHTML=''; pmBlocks.innerHTML='';
+    let n=1;
+    state.blocksAM.forEach((b,i)=>amBlocks.appendChild(makeBlock('AM',i,b,n++)));
+    state.blocksPM.forEach((b,i)=>pmBlocks.appendChild(makeBlock('PM',i,b,n++)));
+  }
+  function arr(section){return section==='AM'?state.blocksAM:state.blocksPM}
+  function makeBlock(section,idx,b,number){
+    const div=document.createElement('div');
+    div.className='task-block'+(b.type?' type-'+b.type:'');
+
+    const head=document.createElement('div'); head.className='block-head';
+    const num=document.createElement('span'); num.className='num'; num.textContent=number;
+    const st=document.createElement('input'); st.type='time'; st.value=b.start;
+    const sep=document.createElement('span'); sep.className='sep'; sep.textContent='–';
+    const en=document.createElement('input'); en.type='time'; en.value=b.end;
+    st.onchange=()=>{arr(section)[idx].start=st.value;scheduleSave()};
+    en.onchange=()=>{arr(section)[idx].end=en.value;scheduleSave()};
+
+    const ps=document.createElement('div'); ps.className='priority-select';
+    TYPES.forEach(t=>{
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='priority-btn '+t+(b.type===t?' active':'');
+      btn.title=t==='a'?'A 중요·긴급':t==='b'?'B 중요·비긴급':'C 중요도 낮음';
+      btn.onclick=()=>{
+        const target=arr(section)[idx];
+        target.type=target.type===t?'':t;
+        scheduleSave(); renderBlocks();
+      };
+      ps.appendChild(btn);
+    });
+
+    const del=document.createElement('button');
+    del.type='button'; del.className='del-btn'; del.textContent='×'; del.title='삭제';
+    del.onclick=()=>{arr(section).splice(idx,1);scheduleSave();renderBlocks()};
+
+    head.append(num,st,sep,en,ps);
+    div.append(head,del);
+
+    const ta=document.createElement('textarea');
+    ta.className='task-input'; ta.rows=2; ta.placeholder='할 일을 적어보세요'; ta.value=b.task||'';
+    ta.oninput=()=>{arr(section)[idx].task=ta.value;scheduleSave()};
+    div.appendChild(ta);
+
+    const comp=document.createElement('div'); comp.className='completion';
+    const lab=document.createElement('label'); lab.textContent='완료 조건';
+    const ci=document.createElement('input'); ci.type='text'; ci.placeholder='예: 초안 작성 완료'; ci.value=b.completion||'';
+    ci.oninput=()=>{arr(section)[idx].completion=ci.value;scheduleSave()};
+    comp.append(lab,ci); div.appendChild(comp);
+
+    return div;
+  }
+  function renderParking(){
+    parkingList.innerHTML='';
+    state.parking.forEach((p,idx)=>{
+      const row=document.createElement('div'); row.className='parking-row'+(p.done?' done':'');
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=p.done;
+      const tx=document.createElement('input'); tx.type='text'; tx.value=p.text||'';
+      const x=document.createElement('button'); x.type='button'; x.className='parking-del'; x.textContent='×';
+      cb.onchange=()=>{p.done=cb.checked;row.classList.toggle('done',cb.checked);scheduleSave()};
+      tx.oninput=()=>{p.text=tx.value;scheduleSave()};
+      x.onclick=()=>{
+        if(state.parking.length<=1) state.parking[0]={text:'',done:false};
+        else state.parking.splice(idx,1);
+        scheduleSave();renderParking();
+      };
+      row.append(cb,tx,x); parkingList.appendChild(row);
+    });
+  }
+
+  dateInput.onchange=e=>{save();currentDate=e.target.value||todayStr();load()};
+  prevDay.onclick=()=>{save();currentDate=shiftDate(currentDate,-1);load()};
+  nextDay.onclick=()=>{save();currentDate=shiftDate(currentDate,1);load()};
+  goal0.oninput=e=>{state.goals[0]=e.target.value;scheduleSave()};
+  goal1.oninput=e=>{state.goals[1]=e.target.value;scheduleSave()};
+  lunchStart.onchange=e=>{state.lunch.start=e.target.value;scheduleSave()};
+  lunchEnd.onchange=e=>{state.lunch.end=e.target.value;scheduleSave()};
+  addAM.onclick=()=>{state.blocksAM.push(freshBlock());scheduleSave();renderBlocks()};
+  addPM.onclick=()=>{state.blocksPM.push(freshBlock());scheduleSave();renderBlocks()};
+  addParking.onclick=()=>{state.parking.push({text:'',done:false});scheduleSave();renderParking()};
+  removeParking.onclick=()=>{
+    if(state.parking.length>1) state.parking.pop();
+    else state.parking[0]={text:'',done:false};
+    scheduleSave();renderParking();
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>
