@@ -340,13 +340,23 @@ details[open] .chev{transform:rotate(180deg)}
 .completion input:focus{outline:none;border-bottom-color:var(--accent)}
 
 .lunch{
-  display:flex;align-items:center;gap:6px;background:var(--lunch-tint);border:1px solid var(--lunch-border);
-  border-radius:12px;padding:10px 12px;color:var(--lunch-text)
+  position:relative;display:flex;align-items:center;gap:6px;
+  background:var(--surface);border:1px solid var(--line);border-left:6px solid #d89b48;
+  border-radius:12px;padding:10px 12px;color:var(--ink);
+  box-shadow:0 1px 2px rgba(21,42,33,.04)
 }
-.lunch .label{font-size:13px;font-weight:800;flex:0 0 auto}
-.lunch .time-field-wrap{flex:1 1 0;min-width:0}
-.lunch .time-text{border-color:var(--lunch-border);background:#fffdf9;color:var(--lunch-text);font:800 15px inherit}
-.lunch .time-clock-btn{border-color:var(--lunch-border);background:#fffdf9;color:var(--lunch-text)}
+.lunch.dragging{opacity:.5;box-shadow:0 6px 16px rgba(0,0,0,.14)}
+.lunch-head{display:flex;align-items:center;gap:6px;width:100%;flex-wrap:wrap}
+.lunch-icon{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex:0 0 26px;background:#f0b968;color:#fff;font-size:13px;font-weight:800
+}
+.lunch .label{font-size:13px;font-weight:800;flex:0 0 auto;color:var(--ink)}
+.lunch .time-field-wrap{flex:1 1 92px;min-width:0}
+.lunch .time-text{border-color:var(--line);background:#fcfcfa;color:var(--ink);font:800 15px inherit}
+.lunch .time-clock-btn{border-color:var(--line);background:#fcfcfa;color:var(--ink)}
+.lunch.read-only{background:#fbfbf9}
+.lunch.read-only .time-text-ro{color:var(--soft)}
 .add-btn{
   width:100%;min-height:42px;border:1px dashed var(--line);border-radius:10px;
   background:transparent;color:var(--soft);font:13px inherit;cursor:pointer;
@@ -380,6 +390,258 @@ details[open] .chev{transform:rotate(180deg)}
 .plain-text{flex:1;min-width:0;font-size:15px;color:var(--ink);padding:6px 2px}
 .parking-row.done .plain-text{text-decoration:line-through;color:var(--faint)}
 </style>
+
+<style id="ui-refresh-v2">
+/* ===== UI REFRESH V2 — visual only, no behavior changes ===== */
+:root{
+  --bg:#f5f1e9;
+  --surface:#fffdf9;
+  --ink:#21362f;
+  --soft:#5d6c65;
+  --faint:#8c9892;
+  --line:#e2ddd3;
+  --accent:#2f6757;
+  --accent-soft:#e4f1eb;
+
+  --core:#df5c49;
+  --collab:#d29a35;
+  --ops:#4d78b7;
+  --a:#df5c49;
+  --b:#d2a03b;
+  --c:#57946b;
+  --routine:#856bc0;
+  --buffer:#89867f;
+
+  --date-tint:#e2f1eb;
+  --date-border:#bdd8cf;
+  --toggle-tint:#eee7dc;
+  --toggle-border:#dfd5c6;
+  --rules-tint:#f0ecf8;
+  --rules-border:#ddd4ef;
+  --lunch-tint:#fff0d6;
+  --lunch-border:#efd2a2;
+  --lunch-text:#8a6429;
+}
+
+body{
+  background:
+    radial-gradient(circle at 12% -5%, rgba(72,126,106,.11), transparent 31%),
+    radial-gradient(circle at 92% 8%, rgba(133,107,192,.08), transparent 28%),
+    var(--bg);
+}
+
+.wrap{max-width:1200px}
+.header{background:rgba(245,241,233,.92)}
+@media(min-width:881px){.header{background:transparent}}
+
+h1{
+  color:#203e34;
+  letter-spacing:1.4px;
+  text-shadow:0 1px 0 rgba(255,255,255,.7);
+}
+.subtitle{color:#6a766f}
+
+.sync-btn,
+.date-row button,
+.sync-actions button,
+.parking-actions button,
+.time-clock-btn{
+  box-shadow:0 2px 7px rgba(45,63,55,.06);
+  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+.sync-btn:hover,.date-row button:hover,.sync-actions button:hover,.parking-actions button:hover,.time-clock-btn:hover{
+  box-shadow:0 4px 12px rgba(45,63,55,.10);
+  transform:translateY(-1px);
+}
+.sync-btn.connected{
+  background:#edf7f2;
+  border-color:#c8e2d7;
+  color:var(--accent);
+}
+
+.mode-toggle{
+  margin-top:7px;
+  padding:5px;
+  gap:5px;
+  background:rgba(255,253,249,.72);
+  border-color:#ddd7cd;
+  border-radius:14px;
+  box-shadow:0 3px 12px rgba(45,63,55,.06);
+}
+.mode-btn{
+  border-radius:10px;
+  padding:10px 8px;
+  color:#667169;
+  font-weight:800;
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.mode-btn:hover{background:#f3efe8;color:var(--ink)}
+.mode-btn.active{box-shadow:0 3px 10px rgba(39,58,49,.15);transform:translateY(-1px)}
+.mode-btn.active[data-mode="all"]{background:#315c4e;color:#fff}
+.mode-btn.active[data-mode="work"]{background:#4d78b7;color:#fff}
+.mode-btn.active[data-mode="personal"]{background:#856bc0;color:#fff}
+
+.date-row{margin-top:16px}
+.date-row button{
+  background:#fffdf9;
+  border-color:#ded9cf;
+  color:#365a4e;
+  border-radius:12px;
+}
+.date-pill{
+  background:linear-gradient(135deg,#e6f4ef,#dceee8);
+  border-color:#bdd8cf;
+  border-radius:13px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 3px 10px rgba(48,83,70,.07);
+}
+.date-display{color:#244b3e}
+.saved{color:#809088}
+
+.sync-panel{
+  border-color:#ddd8cf;
+  border-radius:16px;
+  box-shadow:0 12px 28px rgba(44,59,52,.10);
+}
+.sync-field input{background:#fbfaf7;border-color:#ded9cf}
+.sync-field input:focus{box-shadow:0 0 0 3px rgba(47,103,87,.10)}
+.sync-actions button.primary{box-shadow:0 3px 10px rgba(47,103,87,.18)}
+
+.layout{gap:14px}
+@media(min-width:881px){.layout{gap:24px;margin-top:24px}.sidebar-col{gap:15px}}
+
+.card{
+  background:rgba(255,253,249,.95);
+  border-color:#e1dcd2;
+  border-radius:16px;
+  box-shadow:0 5px 18px rgba(45,63,55,.055);
+}
+.card h2{color:#29483e;font-size:13.5px;letter-spacing:-.1px}
+
+.goal-row .num{
+  background:linear-gradient(135deg,#315f50,#477d6b);
+  box-shadow:0 2px 7px rgba(47,103,87,.18);
+}
+.goal-row input{border-bottom-color:#ded8cd}
+.goal-row input:focus{border-bottom-color:#4f8c77}
+
+.rules-card{
+  background:linear-gradient(145deg,#f3effa,#ede8f7);
+  border-color:#dcd2ee;
+  box-shadow:0 5px 18px rgba(99,77,145,.07);
+}
+.rules li .num{background:#6f5a9f}
+
+.legend-block{border-bottom-color:#e7e1d8}
+.dot{box-shadow:0 0 0 3px rgba(0,0,0,.025)}
+
+.task-block{
+  background:rgba(255,254,251,.98);
+  border-color:#e2ddd4;
+  border-left-width:6px;
+  border-radius:15px;
+  padding:11px 12px 12px;
+  box-shadow:0 4px 14px rgba(42,58,50,.055);
+  transition:box-shadow .18s ease,transform .18s ease,border-color .18s ease;
+}
+.task-block:hover{
+  box-shadow:0 7px 20px rgba(42,58,50,.085);
+  border-top-color:#d9d3c8;
+  border-right-color:#d9d3c8;
+  border-bottom-color:#d9d3c8;
+}
+.task-block.read-only{background:#fbf9f4}
+
+.time-text,.time-clock-btn{
+  background:#faf8f3;
+  border-color:#ddd8ce;
+}
+.time-text:focus{border-color:#4f8c77;box-shadow:0 0 0 3px rgba(47,103,87,.09)}
+.drag-handle{color:#a3aaa6}
+
+.type-select{gap:7px}
+.type-btn{
+  background:#faf8f4;
+  border-color:#ddd8cf;
+  box-shadow:0 1px 3px rgba(45,63,55,.025);
+  transition:transform .13s ease,box-shadow .13s ease,background .13s ease;
+}
+.type-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(45,63,55,.07);filter:none}
+.type-btn.active.core,.type-btn.active.a{background:#fff0ed;color:#c94d3b;border-color:#efb9b0}
+.type-btn.active.collab,.type-btn.active.b{background:#fff4d8;color:#9b6b11;border-color:#ebd292}
+.type-btn.active.ops{background:#edf3fb;color:#3f679f;border-color:#bfd1e8}
+.type-btn.active.c{background:#eaf5ee;color:#427d56;border-color:#bedcc8}
+.type-btn.active.routine{background:#f0ebfa;color:#735aa8;border-color:#d6caed}
+.type-btn.active.buffer{background:#f0eee9;color:#706d66;border-color:#d8d4cb}
+
+.type-badge.core,.type-badge.a{background:#fff0ed;color:#c94d3b}
+.type-badge.collab,.type-badge.b{background:#fff4d8;color:#9b6b11}
+.type-badge.ops{background:#edf3fb;color:#3f679f}
+.type-badge.c{background:#eaf5ee;color:#427d56}
+.type-badge.routine{background:#f0ebfa;color:#735aa8}
+.type-badge.buffer{background:#f0eee9;color:#706d66}
+.mode-chip.work,.wp-chip.work{background:#edf3fb;color:#3f679f}
+.mode-chip.personal,.wp-chip.personal{background:#f0ebfa;color:#735aa8}
+
+.task-input{font-weight:650;color:#263a33}
+.task-input::placeholder{color:#9aa29d}
+.completion{border-top-color:#e2ddd3}
+.completion label{color:#748078}
+
+.lunch{
+  background:rgba(255,254,251,.98);
+  border-color:#e2ddd4;
+  border-left-color:#d89b48;
+  border-radius:15px;
+  box-shadow:0 4px 14px rgba(42,58,50,.055);
+  transition:box-shadow .18s ease,transform .18s ease,border-color .18s ease;
+}
+.lunch:hover{
+  box-shadow:0 7px 20px rgba(42,58,50,.085);
+  border-top-color:#d9d3c8;border-right-color:#d9d3c8;border-bottom-color:#d9d3c8;
+}
+.lunch-icon{background:linear-gradient(135deg,#d89b48,#e8b866);box-shadow:0 2px 7px rgba(190,132,52,.18)}
+.lunch .time-text,.lunch .time-clock-btn{background:#faf8f3;border-color:#ddd8ce;color:var(--ink)}
+
+.add-btn{
+  min-height:44px;
+  border-color:#cfc9bf;
+  border-radius:12px;
+  color:#69766f;
+  background:rgba(255,253,249,.35);
+  font-weight:700;
+  transition:all .16s ease;
+}
+.add-btn:hover{
+  background:#e8f2ed;
+  border-color:#86ad9f;
+  color:#2f6757;
+  box-shadow:0 3px 10px rgba(47,103,87,.07);
+}
+
+.parking-actions button{background:#faf8f4;border-color:#ddd8ce}
+.parking-row input[type=checkbox]{accent-color:#4b856f}
+.parking-row input[type=text]{border-bottom-color:#e1dbd1}
+.parking-row input[type=text]:focus{outline:none;border-bottom-color:#6d9d8c}
+.parking-del:hover,.del-btn:hover{background:#fff0ed;color:#c94d3b}
+
+.tp-pop{
+  border-color:#ddd8cf;
+  box-shadow:0 16px 34px rgba(31,48,40,.18);
+}
+.tp-face{fill:#f7f3ec}
+.tp-pop-tab{background:#e8f1ed}
+.tp-pop-mbtn{background:#faf8f4}
+
+/* mobile polish */
+@media(max-width:880px){
+  .wrap{padding:10px 10px 34px}
+  .header{padding:7px 2px 11px}
+  .card{border-radius:14px;box-shadow:0 3px 12px rgba(45,63,55,.05)}
+  .task-block{border-radius:14px}
+  .mode-toggle{border-radius:13px}
+}
+</style>
+
 </head>
 <body>
 <div class="wrap">
@@ -435,18 +697,8 @@ details[open] .chev{transform:rotate(180deg)}
   <div class="layout">
 
     <div class="timeline-section timeline">
-      <div class="block-list" id="amBlocks"></div>
-      <button class="add-btn" id="addAM">+ 오전 할 일 블록 추가</button>
-
-      <div class="lunch">
-        <span class="label">점심시간</span>
-        <span id="lunchStart"></span>
-        <span class="sep">–</span>
-        <span id="lunchEnd"></span>
-      </div>
-
-      <div class="block-list" id="pmBlocks"></div>
-      <button class="add-btn" id="addPM">+ 오후 할 일 블록 추가</button>
+      <div class="block-list" id="timelineBlocks"></div>
+      <button class="add-btn" id="addBlock">+ 할 일 블록 추가</button>
     </div>
 
     <div class="sidebar-col">
@@ -809,8 +1061,6 @@ details[open] .chev{transform:rotate(180deg)}
   function render(){
     dateInput.value=currentDate;
     dateDisplay.textContent=currentDate;
-    lunchStart.innerHTML=''; lunchStart.appendChild(createTimeField(state.lunch.start||'12:00', false, v=>{ state.lunch.start=v; touchLunch(); }));
-    lunchEnd.innerHTML=''; lunchEnd.appendChild(createTimeField(state.lunch.end||'13:00', false, v=>{ state.lunch.end=v; touchLunch(); }));
     updateModeButtons();
 
     const rulesEl=document.querySelector('.rules-card');
@@ -854,35 +1104,73 @@ details[open] .chev{transform:rotate(180deg)}
   }
 
   function renderTimeline(){
-    const amWrap=document.getElementById('amBlocks');
-    const pmWrap=document.getElementById('pmBlocks');
-    amWrap.innerHTML=''; pmWrap.innerHTML='';
-    const addAMBtn=document.getElementById('addAM'), addPMBtn=document.getElementById('addPM');
+    const wrap=document.getElementById('timelineBlocks');
+    const addBtn=document.getElementById('addBlock');
+    wrap.innerHTML='';
 
     if(currentMode==='all'){
-      addAMBtn.classList.add('hidden'); addPMBtn.classList.add('hidden');
+      addBtn.classList.add('hidden');
+      let n=1;
+      mergedSorted('AM').forEach(item=>wrap.appendChild(makeBlock(item.mode,'AM',item.idx,item.block,n++,true)));
+      wrap.appendChild(makeLunchBlock(true));
+      mergedSorted('PM').forEach(item=>wrap.appendChild(makeBlock(item.mode,'PM',item.idx,item.block,n++,true)));
       if(!hasAnyContentAtAll()){
-        const msg=document.createElement('div'); msg.className='empty-plan'; msg.textContent='플랜을 세워주세요';
-        amWrap.appendChild(msg);
-        return;
+        const msg=document.createElement('div');
+        msg.className='empty-plan';
+        msg.textContent='플랜을 세워주세요';
+        wrap.appendChild(msg);
       }
-      let n=1;
-      mergedSorted('AM').forEach(item=>amWrap.appendChild(makeBlock(item.mode,'AM',item.idx,item.block,n++,true)));
-      n=1;
-      mergedSorted('PM').forEach(item=>pmWrap.appendChild(makeBlock(item.mode,'PM',item.idx,item.block,n++,true)));
-    }else{
-      addAMBtn.classList.remove('hidden'); addPMBtn.classList.remove('hidden');
-      let n=1;
-      arrFor(currentMode,'AM').forEach((b,i)=>amWrap.appendChild(makeBlock(currentMode,'AM',i,b,n++,false)));
-      arrFor(currentMode,'PM').forEach((b,i)=>pmWrap.appendChild(makeBlock(currentMode,'PM',i,b,n++,false)));
-      makeSortable(amWrap,currentMode,'AM');
-      makeSortable(pmWrap,currentMode,'PM');
+      return;
     }
+
+    addBtn.classList.remove('hidden');
+    let n=1;
+    arrFor(currentMode,'AM').forEach((b,i)=>wrap.appendChild(makeBlock(currentMode,'AM',i,b,n++,false)));
+    wrap.appendChild(makeLunchBlock(false));
+    arrFor(currentMode,'PM').forEach((b,i)=>wrap.appendChild(makeBlock(currentMode,'PM',i,b,n++,false)));
+    makeUnifiedSortable(wrap,currentMode);
+  }
+
+  function makeLunchBlock(readOnly){
+    const div=document.createElement('div');
+    div.className='lunch'+(readOnly?' read-only':'');
+    div.dataset.kind='lunch';
+
+    const head=document.createElement('div');
+    head.className='lunch-head';
+
+    if(!readOnly){
+      const handle=document.createElement('span');
+      handle.className='drag-handle';
+      handle.textContent='⋮⋮';
+      handle.setAttribute('aria-label','드래그하여 순서 변경');
+      head.appendChild(handle);
+    }
+
+    const icon=document.createElement('span');
+    icon.className='lunch-icon';
+    icon.textContent='☕';
+
+    const label=document.createElement('span');
+    label.className='label';
+    label.textContent='점심시간';
+
+    const st=createTimeField(state.lunch.start||'12:00', readOnly, v=>{ state.lunch.start=v; touchLunch(); });
+    const sep=document.createElement('span');
+    sep.className='sep';
+    sep.textContent='–';
+    const en=createTimeField(state.lunch.end||'13:00', readOnly, v=>{ state.lunch.end=v; touchLunch(); });
+
+    head.append(icon,label,st,sep,en);
+    div.appendChild(head);
+    return div;
   }
 
   function makeBlock(mode,section,idx,b,number,readOnly){
     const div=document.createElement('div');
     div.className='task-block'+(b.type?' type-'+b.type:'')+(readOnly?' read-only':'');
+    div.dataset.kind='block';
+    div.dataset.section=section;
     div.dataset.idx=idx;
 
     const head=document.createElement('div'); head.className='block-head';
@@ -955,7 +1243,7 @@ details[open] .chev{transform:rotate(180deg)}
     return div;
   }
 
-  function makeSortable(containerEl, mode, section){
+  function makeUnifiedSortable(containerEl, mode){
     Array.from(containerEl.children).forEach(child=>{
       const handle=child.querySelector('.drag-handle');
       if(!handle) return;
@@ -963,9 +1251,10 @@ details[open] .chev{transform:rotate(180deg)}
         e.preventDefault();
         const dragEl=child;
         dragEl.classList.add('dragging');
+
         function onMove(ev){
           const y=ev.clientY;
-          const siblings=Array.from(containerEl.children).filter(c=>c!==dragEl);
+          const siblings=Array.from(containerEl.children).filter(c=>c!==dragEl && c.dataset.kind);
           let placed=false;
           for(const sib of siblings){
             const rect=sib.getBoundingClientRect();
@@ -975,20 +1264,42 @@ details[open] .chev{transform:rotate(180deg)}
               break;
             }
           }
-          if(!placed) containerEl.appendChild(dragEl);
+          if(!placed){
+            const addableChildren=Array.from(containerEl.children).filter(c=>c.dataset.kind);
+            const last=addableChildren[addableChildren.length-1];
+            if(last && last!==dragEl) last.after(dragEl);
+          }
         }
+
         function onUp(){
           document.removeEventListener('pointermove', onMove);
           document.removeEventListener('pointerup', onUp);
           dragEl.classList.remove('dragging');
-          const newOrderIdx=Array.from(containerEl.children).map(c=>parseInt(c.dataset.idx,10));
-          const arr=arrFor(mode,section);
-          const reordered=newOrderIdx.map(i=>arr[i]);
-          arr.length=0;
-          reordered.forEach(b=>arr.push(b));
+
+          const oldAM=state[mode].blocksAM.slice();
+          const oldPM=state[mode].blocksPM.slice();
+          const before=[];
+          const after=[];
+          let passedLunch=false;
+
+          Array.from(containerEl.children).forEach(el=>{
+            if(el.dataset.kind==='lunch'){
+              passedLunch=true;
+              return;
+            }
+            if(el.dataset.kind!=='block') return;
+            const source=el.dataset.section==='AM'?oldAM:oldPM;
+            const block=source[parseInt(el.dataset.idx,10)];
+            if(!block) return;
+            (passedLunch?after:before).push(block);
+          });
+
+          state[mode].blocksAM=before;
+          state[mode].blocksPM=after;
           touchMode(mode);
           renderTimeline();
         }
+
         document.addEventListener('pointermove', onMove);
         document.addEventListener('pointerup', onUp);
       };
@@ -1129,8 +1440,7 @@ details[open] .chev{transform:rotate(180deg)}
   dateInput.onchange=e=>{save();currentDate=e.target.value||todayStr();load()};
   prevDay.onclick=()=>{save();currentDate=shiftDate(currentDate,-1);load()};
   nextDay.onclick=()=>{save();currentDate=shiftDate(currentDate,1);load()};
-  addAM.onclick=()=>{ if(currentMode==='all') return; state[currentMode].blocksAM.push(freshBlock()); touchMode(currentMode); renderTimeline(); };
-  addPM.onclick=()=>{ if(currentMode==='all') return; state[currentMode].blocksPM.push(freshBlock()); touchMode(currentMode); renderTimeline(); };
+  addBlock.onclick=()=>{ if(currentMode==='all') return; state[currentMode].blocksPM.push(freshBlock()); touchMode(currentMode); renderTimeline(); };
 
   // ---------------- GitHub Gist sync ----------------
   function getCfg(){
