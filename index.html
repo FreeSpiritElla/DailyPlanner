@@ -8,23 +8,33 @@
 <title>Daily Planner</title>
 <style>
 :root{
-  --bg:#f8f7f3;
+  --bg:#f6f4ee;
   --surface:#fff;
-  --ink:#1f3b33;
-  --soft:#66736d;
-  --faint:#9aa39f;
-  --line:#e3e2dc;
-  --accent:#2f5d50;
-  --accent-soft:#edf2ef;
+  --ink:#152a21;
+  --soft:#40493f;
+  --faint:#707b6f;
+  --line:#dcdad0;
+  --accent:#25493e;
+  --accent-soft:#dcebe3;
 
-  --core:#a13f3f;
-  --collab:#93701c;
-  --ops:#3a6491;
-  --a:#b74d4d;
-  --b:#c79a2e;
-  --c:#4f8b67;
-  --routine:#7a5fbd;
-  --buffer:#6d6d67;
+  --core:#c0392b;
+  --collab:#a3730f;
+  --ops:#2b5aa0;
+  --a:#c0392b;
+  --b:#b8860b;
+  --c:#2f8a56;
+  --routine:#6b46b0;
+  --buffer:#5a5a52;
+
+  --date-tint:#d8ebe7;
+  --date-border:#b3d6cf;
+  --toggle-tint:#ece7da;
+  --toggle-border:#ddd4bd;
+  --rules-tint:#e7e4f4;
+  --rules-border:#d3cfec;
+  --lunch-tint:#f7e3c4;
+  --lunch-border:#ecce9c;
+  --lunch-text:#8a6a34;
 }
 *{box-sizing:border-box}
 body{
@@ -65,30 +75,36 @@ h1{margin:0 0 2px;font-size:21px;letter-spacing:1px;font-weight:800}
 
 /* mode toggle */
 .mode-toggle{
-  display:flex;gap:6px;margin-top:10px;background:var(--accent-soft);border:1px solid var(--line);
+  display:flex;gap:6px;margin-top:4px;background:var(--toggle-tint);border:1px solid var(--toggle-border);
   border-radius:10px;padding:4px;
 }
 .mode-btn{
-  flex:1;border:0;background:transparent;color:var(--soft);font:700 12.5px inherit;
-  padding:8px 6px;border-radius:8px;cursor:pointer;
+  flex:1;border:0;background:transparent;color:var(--ink);font:800 13.5px inherit;
+  padding:9px 6px;border-radius:8px;cursor:pointer;letter-spacing:.3px;
 }
 .mode-btn.active{background:var(--ink);color:#fff}
-.mode-btn.active[data-mode="work"]{background:var(--ops)}
-.mode-btn.active[data-mode="personal"]{background:var(--routine)}
+.mode-btn.active[data-mode="all"]{background:#b6b4a8;color:var(--ink)}
+.mode-btn.active[data-mode="work"]{background:var(--ops);color:#fff}
+.mode-btn.active[data-mode="personal"]{background:var(--routine);color:#fff}
 
-.date-row{display:grid;grid-template-columns:40px 1fr 40px;gap:8px;align-items:center;margin-top:10px}
+.date-row{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin-top:18px}
 .date-row button{
-  width:40px;height:40px;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font-size:22px;cursor:pointer;
+  width:44px;height:44px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);color:var(--ink);font-size:24px;font-weight:800;cursor:pointer;
 }
 .date-pill{
-  min-height:40px;display:flex;align-items:center;justify-content:center;
-  background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:6px 10px
+  position:relative;min-height:44px;display:flex;align-items:center;justify-content:center;
+  background:var(--date-tint);border:1px solid var(--date-border);border-radius:10px;padding:6px 10px
 }
 .date-pill input{
-  width:100%;border:0;background:transparent;color:var(--ink);font:800 16px inherit;text-align:center;letter-spacing:.2px;
+  width:100%;border:0;background:transparent;color:transparent;caret-color:transparent;
+  font:900 21px inherit;text-align:center;letter-spacing:.3px;
 }
-.saved{height:14px;text-align:right;font-size:10.5px;color:var(--faint);margin-top:4px}
+.date-display{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;font:900 21px inherit;color:var(--ink);letter-spacing:.3px;
+}
+.saved{height:12px;text-align:right;font-size:11px;font-weight:700;color:var(--faint);margin-top:2px}
 .saved.error{color:#b0473f}
 
 /* sync panel */
@@ -147,8 +163,8 @@ h1{margin:0 0 2px;font-size:21px;letter-spacing:1px;font-weight:800}
 .goal-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .goal-row:last-child{margin-bottom:0}
 .num{
-  width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:var(--accent);color:#fff;font-size:11px;font-weight:800;flex:0 0 24px
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;font-size:12px;font-weight:800;flex:0 0 26px
 }
 .goal-row input{
   flex:1;min-width:0;border:0;border-bottom:1px solid var(--line);background:transparent;
@@ -158,16 +174,17 @@ h1{margin:0 0 2px;font-size:21px;letter-spacing:1px;font-weight:800}
 .goal-row input:disabled{color:var(--soft)}
 .empty-note{color:var(--faint);font-size:12.5px}
 
+.rules-card{background:var(--rules-tint);border-color:var(--rules-border)}
 details.rules summary{
   list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
-  font-size:14px;font-weight:800;color:var(--ink)
+  font-size:14.5px;font-weight:800;color:var(--ink)
 }
 details.rules summary::-webkit-details-marker{display:none}
 .chev{font-size:18px;color:var(--faint);transition:.2s}
 details[open] .chev{transform:rotate(180deg)}
 .rules ol{list-style:none;margin:13px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
-.rules li{display:flex;gap:9px;align-items:flex-start;font-size:14px;color:var(--ink);font-weight:600;line-height:1.4}
-.rules li .num{width:20px;height:20px;flex-basis:20px;background:var(--accent);font-size:11px}
+.rules li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--soft);font-weight:400;line-height:1.4}
+.rules li .num{width:19px;height:19px;flex-basis:19px;background:var(--ink);color:#fff;font-size:10.5px}
 
 /* legend */
 .legend-block{padding:8px 0;border-bottom:1px solid var(--line)}
@@ -189,8 +206,8 @@ details[open] .chev{transform:rotate(180deg)}
 .timeline{display:flex;flex-direction:column;gap:9px}
 .block-list{display:flex;flex-direction:column;gap:9px}
 .task-block{
-  position:relative;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);
-  border-radius:12px;padding:10px 10px 11px
+  position:relative;background:var(--surface);border:1px solid var(--line);border-left:7px solid var(--line);
+  border-radius:12px;padding:10px 10px 11px;box-shadow:0 1px 2px rgba(21,42,33,.04)
 }
 .task-block.dragging{opacity:.5;box-shadow:0 6px 16px rgba(0,0,0,.14)}
 .task-block.type-core{border-left-color:var(--core)}
@@ -218,26 +235,65 @@ details[open] .chev{transform:rotate(180deg)}
 .drag-handle:active{cursor:grabbing}
 
 .block-head{display:flex;align-items:center;gap:6px;padding-right:18px;flex-wrap:wrap}
-.block-head input[type=time]{
-  flex:1 1 70px;min-width:0;border:1px solid var(--line);border-radius:8px;
-  padding:6px 3px;background:#fcfcfa;color:var(--ink);font:13px inherit
+.time-field-wrap{display:inline-flex;align-items:center;gap:4px;flex:1 1 92px;min-width:0}
+.time-text{
+  flex:1 1 auto;min-width:0;border:1.5px solid var(--line);border-radius:8px;
+  padding:8px 4px;background:#fcfcfa;color:var(--ink);font:800 15px inherit;
+  text-align:center;font-family:inherit;
 }
-.block-head input[type=time]:disabled{background:transparent;border-color:transparent;color:var(--soft)}
-.sep{color:var(--faint);font-size:12px;flex:0 0 auto}
+.time-text:focus{outline:none;border-color:var(--accent)}
+.time-clock-btn{
+  flex:0 0 auto;border:1.5px solid var(--line);border-radius:8px;background:#fcfcfa;
+  width:32px;height:32px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  padding:0;
+}
+.time-clock-btn:hover{background:var(--accent-soft)}
+.time-text-ro{
+  flex:1 1 92px;min-width:0;border-radius:8px;
+  padding:8px 4px;background:transparent;color:var(--soft);font:800 15px inherit;text-align:center;
+}
+.sep{color:var(--soft);font-size:13px;font-weight:800;flex:0 0 auto}
+
+/* small anchored time-picker popup */
+.tp-pop{
+  position:fixed;z-index:250;background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:11px;width:200px;box-shadow:0 10px 26px rgba(0,0,0,.22);
+}
+.tp-pop-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.tp-pop-preview{font-size:13.5px;font-weight:800;color:var(--ink)}
+.tp-pop-close{border:0;background:transparent;font-size:16px;color:var(--faint);cursor:pointer;line-height:1;padding:0 2px}
+.tp-pop-meridiem{display:flex;gap:5px;margin-bottom:7px}
+.tp-pop-mbtn{flex:1;border:1.5px solid var(--line);background:#fcfcfa;border-radius:7px;padding:5px;font:700 11px inherit;color:var(--soft);cursor:pointer}
+.tp-pop-mbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tp-pop-tabs{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:7px}
+.tp-pop-tab{border:0;background:var(--accent-soft);border-radius:7px;padding:4px 10px;font:800 12.5px inherit;color:var(--soft);cursor:pointer}
+.tp-pop-tab.active{background:var(--accent);color:#fff}
+.tp-pop-tabsep{font-weight:800;color:var(--faint);font-size:12px}
+.tp-dial-wrap{display:flex;justify-content:center}
+.tp-pop .tp-dial{width:150px;height:150px}
+.tp-face{fill:var(--bg);stroke:var(--line)}
+.tp-hand{stroke:var(--accent);stroke-width:2}
+.tp-center{fill:var(--accent)}
+.tp-tick circle{fill:transparent;cursor:pointer}
+.tp-tick text{font-size:13px;font-weight:700;fill:var(--ink);text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+.tp-tick.active circle{fill:var(--accent)}
+.tp-tick.active text{fill:#fff}
 
 .mode-chip{font-size:10px;font-weight:800;padding:3px 7px;border-radius:8px;margin-left:auto;flex-shrink:0}
 .mode-chip.work{background:#dce7f4;color:var(--ops)}
 .mode-chip.personal{background:#e9e3f7;color:var(--routine)}
-.wp-chip{font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;flex:0 0 auto}
+.wp-chip{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:8px;flex:0 0 auto;white-space:nowrap}
 .wp-chip.work{background:#dce7f4;color:var(--ops)}
 .wp-chip.personal{background:#e9e3f7;color:var(--routine)}
 
-.type-select{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.type-select{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .type-btn{
-  border:1px solid var(--line);background:#fcfcfa;color:var(--soft);border-radius:20px;
-  padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;
+  border:1.5px solid var(--line);background:#fcfcfa;color:var(--soft);border-radius:20px;
+  padding:5px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;
+  display:inline-flex;align-items:center;
 }
 .type-btn:hover{filter:brightness(0.97)}
+.tdot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0}
 .type-btn.active.core{background:#f8dcdc;color:var(--core);border-color:#e6b9b9;font-weight:700}
 .type-btn.active.collab{background:#fbedc4;color:var(--collab);border-color:#eddca0;font-weight:700}
 .type-btn.active.ops{background:#dce7f4;color:var(--ops);border-color:#bcd1e8;font-weight:700}
@@ -268,7 +324,7 @@ details[open] .chev{transform:rotate(180deg)}
 
 .task-input{
   width:100%;min-height:54px;border:0;resize:vertical;background:transparent;color:var(--ink);
-  font:16px/1.45 inherit;padding:7px 2px 0
+  font:600 16px/1.45 inherit;padding:7px 2px 0
 }
 .task-input:focus{outline:none}
 .task-input::placeholder{color:var(--faint)}
@@ -284,14 +340,13 @@ details[open] .chev{transform:rotate(180deg)}
 .completion input:focus{outline:none;border-bottom-color:var(--accent)}
 
 .lunch{
-  display:flex;align-items:center;gap:6px;background:#f2ede6;border:1px solid #e6ddcf;
-  border-radius:12px;padding:10px 12px;color:#826a4c
+  display:flex;align-items:center;gap:6px;background:var(--lunch-tint);border:1px solid var(--lunch-border);
+  border-radius:12px;padding:10px 12px;color:var(--lunch-text)
 }
-.lunch .label{font-size:12px;font-weight:800;flex:0 0 auto}
-.lunch input{
-  flex:1 1 0;width:0;min-width:0;border:1px solid #e6ddcf;border-radius:8px;
-  background:#fffdf9;color:#826a4c;font:13px inherit;padding:7px 3px
-}
+.lunch .label{font-size:13px;font-weight:800;flex:0 0 auto}
+.lunch .time-field-wrap{flex:1 1 0;min-width:0}
+.lunch .time-text{border-color:var(--lunch-border);background:#fffdf9;color:var(--lunch-text);font:800 15px inherit}
+.lunch .time-clock-btn{border-color:var(--lunch-border);background:#fffdf9;color:var(--lunch-text)}
 .add-btn{
   width:100%;min-height:42px;border:1px dashed var(--line);border-radius:10px;
   background:transparent;color:var(--soft);font:13px inherit;cursor:pointer;
@@ -338,6 +393,13 @@ details[open] .chev{transform:rotate(180deg)}
       <button class="sync-btn" id="syncToggle" type="button"><span class="dot"></span><span id="syncBtnLabel">동기화</span></button>
     </div>
 
+    <div class="date-row">
+      <button id="prevDay">‹</button>
+      <div class="date-pill"><input type="date" id="dateInput"><span class="date-display" id="dateDisplay"></span></div>
+      <button id="nextDay">›</button>
+    </div>
+    <div class="saved" id="saved"></div>
+
     <div class="mode-toggle" id="modeToggle">
       <button type="button" class="mode-btn" data-mode="all">전체</button>
       <button type="button" class="mode-btn" data-mode="work">WORK</button>
@@ -368,13 +430,6 @@ details[open] .chev{transform:rotate(180deg)}
       </div>
       <div class="sync-status" id="syncStatus"></div>
     </div>
-
-    <div class="date-row">
-      <button id="prevDay">‹</button>
-      <div class="date-pill"><input type="date" id="dateInput"></div>
-      <button id="nextDay">›</button>
-    </div>
-    <div class="saved" id="saved"></div>
   </div>
 
   <div class="layout">
@@ -385,9 +440,9 @@ details[open] .chev{transform:rotate(180deg)}
 
       <div class="lunch">
         <span class="label">점심시간</span>
-        <input type="time" id="lunchStart">
+        <span id="lunchStart"></span>
         <span class="sep">–</span>
-        <input type="time" id="lunchEnd">
+        <span id="lunchEnd"></span>
       </div>
 
       <div class="block-list" id="pmBlocks"></div>
@@ -400,7 +455,7 @@ details[open] .chev{transform:rotate(180deg)}
       <div class="parking-area" id="parkingWrap"></div>
 
       <details class="card rules rules-card">
-        <summary><span>플래닝 규칙</span><span class="chev">⌄</span></summary>
+        <summary><span>Planning 규칙</span><span class="chev">⌄</span></summary>
         <ol>
           <li><span class="num">1</span>핵심 목표는 하루 최대 2개</li>
           <li><span class="num">2</span>핵심 목표부터 작성</li>
@@ -422,7 +477,8 @@ details[open] .chev{transform:rotate(180deg)}
   const WORK_TYPES=['core','collab','ops','buffer'];
   const WORK_LABELS={core:'핵심업무',collab:'후속·협업',ops:'운영·잡무',buffer:'버퍼'};
   const PERSONAL_TYPES=['a','b','c','routine','buffer'];
-  const PERSONAL_LABELS={a:'A',b:'B',c:'C',routine:'루틴',buffer:'버퍼'};
+  const PERSONAL_LABELS={a:'A 긴급·중요',b:'B 중요',c:'C 기타',routine:'루틴',buffer:'버퍼'};
+  const TYPE_COLORS={core:'#c0392b',collab:'#a3730f',ops:'#2b5aa0',a:'#c0392b',b:'#b8860b',c:'#2f8a56',routine:'#6b46b0',buffer:'#5a5a52'};
 
   const LEGEND_META={
     work:[
@@ -432,9 +488,9 @@ details[open] .chev{transform:rotate(180deg)}
       {t:'buffer',title:'버퍼',desc:'밀린 일 · 돌발 업무',tip:'하루 30~60분 확보'}
     ],
     personal:[
-      {t:'a',title:'A',desc:'중요하고 오늘 처리해야 하는 일',tip:'가장 먼저 시간 확보'},
-      {t:'b',title:'B',desc:'중요하지만 오늘 반드시 끝낼 필요는 없는 일'},
-      {t:'c',title:'C',desc:'낮은 우선순위 · 잡무'},
+      {t:'a',title:'A 긴급·중요',desc:'중요하고 오늘 처리해야 하는 일',tip:'가장 먼저 시간 확보'},
+      {t:'b',title:'B 중요',desc:'중요하지만 오늘 반드시 끝낼 필요는 없는 일'},
+      {t:'c',title:'C 기타',desc:'낮은 우선순위 · 잡무'},
       {t:'routine',title:'루틴',desc:'태극권, 요가, 명상, 운동 등 반복 활동'},
       {t:'buffer',title:'버퍼',desc:'이동, 식사, 예비시간 등 중립 일정'}
     ]
@@ -576,6 +632,154 @@ details[open] .chev{transform:rotate(180deg)}
   function touchLunch(){ state.lunch._u=Date.now(); scheduleSave(); }
   function touchMode(mode){ state[mode]._u=Date.now(); scheduleSave(); }
 
+  // ---------------- small anchored clock-style time picker ----------------
+  let activeTimePop=null, activeTimePopCleanup=null;
+  function closeTimePopup(){
+    if(activeTimePop && activeTimePop.parentNode) activeTimePop.parentNode.removeChild(activeTimePop);
+    activeTimePop=null;
+    if(activeTimePopCleanup){ activeTimePopCleanup(); activeTimePopCleanup=null; }
+  }
+
+  function openTimePicker(anchorEl, initialHHMM, onCommit){
+    closeTimePopup();
+    let parts=(initialHHMM||'09:00').split(':');
+    let ih=parseInt(parts[0],10)||0, im=parseInt(parts[1],10)||0;
+    let meridiem = ih>=12 ? 'PM':'AM';
+    let hour12 = ih%12; if(hour12===0) hour12=12;
+    let minute = im;
+    let mode='hour';
+
+    const pop=document.createElement('div'); pop.className='tp-pop';
+    document.body.appendChild(pop);
+    activeTimePop=pop;
+
+    function currentHour24(){
+      let h=hour12%12;
+      if(meridiem==='PM') h+=12;
+      return h;
+    }
+    function position(){
+      const r=anchorEl.getBoundingClientRect();
+      const pw=pop.offsetWidth, ph=pop.offsetHeight;
+      let top=r.bottom+6;
+      if(top+ph>window.innerHeight-8) top=r.top-ph-6;
+      if(top<8) top=8;
+      let left=r.left;
+      if(left+pw>window.innerWidth-8) left=window.innerWidth-pw-8;
+      if(left<8) left=8;
+      pop.style.top=top+'px';
+      pop.style.left=left+'px';
+    }
+    function dialSVG(){
+      const isHour=mode==='hour';
+      const items=[];
+      for(let i=0;i<12;i++){
+        const angle=i*30;
+        const label = isHour ? String(i===0?12:i) : String(i*5).padStart(2,'0');
+        const value = isHour ? (i===0?12:i) : i*5;
+        items.push({angle,label,value});
+      }
+      const cx=100, cy=100, r=78;
+      const activeValue = isHour? hour12 : minute;
+      const active = items.find(it=>it.value===activeValue) || items[0];
+      const rad=(active.angle-90)*Math.PI/180;
+      const hx=cx+(r-6)*Math.cos(rad), hy=cy+(r-6)*Math.sin(rad);
+      let svg=`<svg viewBox="0 0 200 200" class="tp-dial">`;
+      svg+=`<circle cx="100" cy="100" r="92" class="tp-face"/>`;
+      svg+=`<line x1="${cx}" y1="${cy}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" class="tp-hand"/>`;
+      svg+=`<circle cx="${cx}" cy="${cy}" r="4" class="tp-center"/>`;
+      items.forEach(it=>{
+        const rad2=(it.angle-90)*Math.PI/180;
+        const px=(cx+r*Math.cos(rad2)).toFixed(1), py=(cy+r*Math.sin(rad2)).toFixed(1);
+        const isActive=it.value===active.value;
+        svg+=`<g class="tp-tick${isActive?' active':''}" data-value="${it.value}">`+
+             `<circle cx="${px}" cy="${py}" r="14"/>`+
+             `<text x="${px}" y="${py}">${it.label}</text></g>`;
+      });
+      svg+=`</svg>`;
+      return svg;
+    }
+    function render(){
+      pop.innerHTML=
+        '<div class="tp-pop-head">'+
+          '<span class="tp-pop-preview">'+String(hour12).padStart(2,'0')+':'+String(minute).padStart(2,'0')+' '+(meridiem==='AM'?'오전':'오후')+'</span>'+
+          '<button type="button" class="tp-pop-close" aria-label="닫기">×</button>'+
+        '</div>'+
+        '<div class="tp-pop-meridiem">'+
+          '<button type="button" class="tp-pop-mbtn'+(meridiem==='AM'?' active':'')+'" data-m="AM">오전</button>'+
+          '<button type="button" class="tp-pop-mbtn'+(meridiem==='PM'?' active':'')+'" data-m="PM">오후</button>'+
+        '</div>'+
+        '<div class="tp-pop-tabs">'+
+          '<button type="button" class="tp-pop-tab'+(mode==='hour'?' active':'')+'" data-mode="hour">'+String(hour12).padStart(2,'0')+'시</button>'+
+          '<span class="tp-pop-tabsep">:</span>'+
+          '<button type="button" class="tp-pop-tab'+(mode==='minute'?' active':'')+'" data-mode="minute">'+String(minute).padStart(2,'0')+'분</button>'+
+        '</div>'+
+        '<div class="tp-dial-wrap">'+dialSVG()+'</div>';
+      pop.querySelector('.tp-pop-close').onclick=closeTimePopup;
+      pop.querySelectorAll('.tp-pop-mbtn').forEach(btn=>{ btn.onclick=()=>{ meridiem=btn.dataset.m; render(); }; });
+      pop.querySelectorAll('.tp-pop-tab').forEach(btn=>{ btn.onclick=()=>{ mode=btn.dataset.mode; render(); }; });
+      pop.querySelectorAll('.tp-tick').forEach(g=>{
+        g.addEventListener('click', ()=>{
+          const v=parseInt(g.dataset.value,10);
+          if(mode==='hour'){ hour12=v; mode='minute'; render(); }
+          else{ minute=v; commit(); }
+        });
+      });
+      position();
+    }
+    function commit(){
+      const hh=String(currentHour24()).padStart(2,'0');
+      const mm=String(minute).padStart(2,'0');
+      onCommit(hh+':'+mm);
+      closeTimePopup();
+    }
+    function onDocDown(e){ if(!pop.contains(e.target) && e.target!==anchorEl) closeTimePopup(); }
+    function onKey(e){ if(e.key==='Escape') closeTimePopup(); }
+    activeTimePopCleanup=()=>{
+      document.removeEventListener('mousedown', onDocDown, true);
+      document.removeEventListener('keydown', onKey);
+    };
+    render();
+    setTimeout(()=>document.addEventListener('mousedown', onDocDown, true), 0);
+    document.addEventListener('keydown', onKey);
+  }
+
+  function createTimeField(value, disabled, onChange){
+    const wrap=document.createElement('span'); wrap.className='time-field-wrap';
+    if(disabled){
+      const ro=document.createElement('span'); ro.className='time-text-ro'; ro.textContent=value||'--:--';
+      wrap.appendChild(ro);
+      return wrap;
+    }
+    const input=document.createElement('input');
+    input.type='text'; input.className='time-text'; input.value=value||''; input.inputMode='numeric'; input.placeholder='--:--'; input.maxLength=5;
+    function commitText(){
+      const raw=input.value.trim();
+      const m=raw.match(/^(\d{1,2}):?(\d{2})$/);
+      if(m){
+        const hh=Math.max(0,Math.min(23,parseInt(m[1],10)));
+        const mm=Math.max(0,Math.min(59,parseInt(m[2],10)));
+        const v=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+        input.value=v; value=v; onChange(v);
+      }else{
+        input.value=value||'';
+      }
+    }
+    input.addEventListener('blur', commitText);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); input.blur(); } });
+
+    const clockBtn=document.createElement('button');
+    clockBtn.type='button'; clockBtn.className='time-clock-btn'; clockBtn.textContent='🕐';
+    clockBtn.setAttribute('aria-label','시계로 시간 선택');
+    clockBtn.onclick=()=>{
+      openTimePicker(clockBtn, value||'09:00', (newVal)=>{
+        value=newVal; input.value=newVal; onChange(newVal);
+      });
+    };
+    wrap.append(input, clockBtn);
+    return wrap;
+  }
+
   // ---------------- content helpers ----------------
   function hasText(s){ return typeof s==='string' && s.trim()!==''; }
   function hasAnyContentAtAll(){
@@ -604,12 +808,30 @@ details[open] .chev{transform:rotate(180deg)}
   // ---------------- render ----------------
   function render(){
     dateInput.value=currentDate;
-    lunchStart.value=state.lunch.start||'12:00';
-    lunchEnd.value=state.lunch.end||'13:00';
+    dateDisplay.textContent=currentDate;
+    lunchStart.innerHTML=''; lunchStart.appendChild(createTimeField(state.lunch.start||'12:00', false, v=>{ state.lunch.start=v; touchLunch(); }));
+    lunchEnd.innerHTML=''; lunchEnd.appendChild(createTimeField(state.lunch.end||'13:00', false, v=>{ state.lunch.end=v; touchLunch(); }));
     updateModeButtons();
 
     const rulesEl=document.querySelector('.rules-card');
     rulesEl.style.display = currentMode==='all' ? 'none' : '';
+
+    const sidebarCol=document.querySelector('.sidebar-col');
+    const timelineSection=document.querySelector('.timeline-section');
+    if(currentMode==='all'){
+      const goalsFilled=['work','personal'].some(m=>state[m].goals.some(hasText));
+      const todoFilled=['work','personal'].some(m=>state[m].parking.some(p=>hasText(p.text)));
+      if(!goalsFilled && !todoFilled){
+        sidebarCol.style.display='none';
+        timelineSection.style.flex='1 1 100%';
+      }else{
+        sidebarCol.style.display='';
+        timelineSection.style.flex='';
+      }
+    }else{
+      sidebarCol.style.display='';
+      timelineSection.style.flex='';
+    }
 
     renderTimeline();
     renderGoals();
@@ -673,13 +895,9 @@ details[open] .chev{transform:rotate(180deg)}
     }
 
     const num=document.createElement('span'); num.className='num'; num.textContent=number;
-    const st=document.createElement('input'); st.type='time'; st.value=b.start; st.disabled=readOnly;
+    const st=createTimeField(b.start, readOnly, (v)=>{arrFor(mode,section)[idx].start=v;touchMode(mode)});
     const sep=document.createElement('span'); sep.className='sep'; sep.textContent='–';
-    const en=document.createElement('input'); en.type='time'; en.value=b.end; en.disabled=readOnly;
-    if(!readOnly){
-      st.onchange=()=>{arrFor(mode,section)[idx].start=st.value;touchMode(mode)};
-      en.onchange=()=>{arrFor(mode,section)[idx].end=en.value;touchMode(mode)};
-    }
+    const en=createTimeField(b.end, readOnly, (v)=>{arrFor(mode,section)[idx].end=v;touchMode(mode)});
     head.append(num,st,sep,en);
 
     if(readOnly){
@@ -706,7 +924,9 @@ details[open] .chev{transform:rotate(180deg)}
         const btn=document.createElement('button');
         btn.type='button';
         btn.className='type-btn'+(b.type===t?' active '+t:'');
-        btn.textContent=typeLabels(mode)[t];
+        const dot=document.createElement('span'); dot.className='tdot'; dot.style.background=TYPE_COLORS[t];
+        btn.appendChild(dot);
+        btn.appendChild(document.createTextNode(typeLabels(mode)[t]));
         btn.onclick=()=>{
           const target=arrFor(mode,section)[idx];
           target.type=target.type===t?'':t;
@@ -790,7 +1010,7 @@ details[open] .chev{transform:rotate(180deg)}
       rows.forEach(r=>{
         const row=document.createElement('div'); row.className='goal-row';
         const chip=document.createElement('span'); chip.className='wp-chip '+r.mode;
-        chip.textContent=r.mode==='work'?'[W]':'[P]';
+        chip.textContent=r.mode==='work'?'WORK':'PERSONAL';
         const txt=document.createElement('span'); txt.className='plain-text'; txt.style.padding='7px 2px'; txt.textContent=r.text;
         row.append(chip,txt); card.appendChild(row);
       });
@@ -856,9 +1076,9 @@ details[open] .chev{transform:rotate(180deg)}
       rows.forEach(r=>{
         const row=document.createElement('div'); row.className='parking-row'+(r.done?' done':'');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=r.done; cb.disabled=true;
-        const chip=document.createElement('span'); chip.className='wp-chip '+r.mode; chip.textContent=r.mode==='work'?'[W]':'[P]';
+        const chip=document.createElement('span'); chip.className='wp-chip '+r.mode; chip.textContent=r.mode==='work'?'WORK':'PERSONAL';
         const txt=document.createElement('span'); txt.className='plain-text'; txt.textContent=r.text;
-        row.append(cb,chip,txt); list.appendChild(row);
+        row.append(chip,cb,txt); list.appendChild(row);
       });
       card.appendChild(list);
       wrap.appendChild(card);
@@ -909,8 +1129,6 @@ details[open] .chev{transform:rotate(180deg)}
   dateInput.onchange=e=>{save();currentDate=e.target.value||todayStr();load()};
   prevDay.onclick=()=>{save();currentDate=shiftDate(currentDate,-1);load()};
   nextDay.onclick=()=>{save();currentDate=shiftDate(currentDate,1);load()};
-  lunchStart.onchange=e=>{state.lunch.start=e.target.value;touchLunch()};
-  lunchEnd.onchange=e=>{state.lunch.end=e.target.value;touchLunch()};
   addAM.onclick=()=>{ if(currentMode==='all') return; state[currentMode].blocksAM.push(freshBlock()); touchMode(currentMode); renderTimeline(); };
   addPM.onclick=()=>{ if(currentMode==='all') return; state[currentMode].blocksPM.push(freshBlock()); touchMode(currentMode); renderTimeline(); };
 
