@@ -330,6 +330,18 @@ details[open] .chev{transform:rotate(180deg)}
 .task-input::placeholder{color:var(--faint)}
 .task-input:read-only{resize:none}
 
+.task-status{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.status-option{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #d9d7cf;border-radius:8px;background:#fff;color:#536258;font-size:12px;font-weight:750;cursor:pointer;user-select:none}
+.status-option input{width:16px;height:16px;margin:0;accent-color:#348366;cursor:pointer}
+.status-option.cancel input{accent-color:#8b7770}
+.status-option:has(input:checked){border-color:#83b39d;background:#e9f5ed;color:#216348}
+.status-option.cancel:has(input:checked){border-color:#bea9a0;background:#f2ece9;color:#705b54}
+.task-block.status-done{background:#f0f8f1;border-color:#a8cdb4;box-shadow:0 3px 14px rgba(49,119,74,.1)}
+.task-block.status-done .task-input{color:#287047}
+.task-block.status-cancelled{background:#f3f1ee;border-color:#cdc5bf}
+.task-block.status-cancelled .task-input{text-decoration:line-through;color:#8b8984}
+.task-block.status-cancelled .type-badge{opacity:.65}
+
 .completion{display:none;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line)}
 .completion.show{display:block}
 .completion label{display:block;font-size:11px;font-weight:700;color:var(--soft);margin-bottom:3px}
@@ -632,6 +644,10 @@ h1{
 .tp-pop-tab{background:#e8f1ed}
 .tp-pop-mbtn{background:#faf8f4}
 
+/* Keep status colors visible in the read-only timeline of the All tab. */
+.task-block.status-done,.task-block.status-done.read-only{background:#f0f8f1;border-color:#a8cdb4}
+.task-block.status-cancelled,.task-block.status-cancelled.read-only{background:#f3f1ee;border-color:#cdc5bf}
+
 /* mobile polish */
 @media(max-width:880px){
   .wrap{padding:10px 10px 34px}
@@ -766,36 +782,24 @@ h1{
   function modeName(mode){ return mode==='work'?'WORK':'PERSONAL'; }
   function completionTypes(mode){ return mode==='work'?['core']:['a','b']; }
 
-  function freshBlock(start='',end='',type='',task=''){return {start,end,type,task,completion:''}}
+  function freshBlock(start='',end='',type='',task=''){return {start,end,type,task,completion:'',status:''}}
 
   function defaultModeData(mode){
     if(mode==='work'){
       return {
         goals:['',''],
-        blocksAM:[freshBlock('10:00','10:20','ops','운영 · 잡무'),freshBlock('10:20','11:00','','')],
-        blocksPM:[
-          freshBlock('13:00','14:30','',''),
-          freshBlock('14:30','16:30','',''),
-          freshBlock('16:30','18:30','',''),
-          freshBlock('18:30','19:00','ops','운영 · 잡무')
-        ],
+        blocksAM:[freshBlock('10:00','11:00','','')],
+        blocksPM:[freshBlock('13:00','14:00','','')],
         parking:[{text:'',done:false},{text:'',done:false}],
-        _u:0
+        _u:0,_layoutV2:true
       };
     }
     return {
       goals:['',''],
-      blocksAM:[freshBlock('10:00','10:20','',''),freshBlock('10:20','11:00','','')],
-      blocksPM:[
-        freshBlock('13:00','14:00','',''),
-        freshBlock('14:00','15:00','',''),
-        freshBlock('15:00','16:00','',''),
-        freshBlock('16:00','17:00','',''),
-        freshBlock('17:00','18:30','',''),
-        freshBlock('18:30','19:00','','')
-      ],
+      blocksAM:[freshBlock('10:00','11:00','','')],
+      blocksPM:[freshBlock('13:00','14:00','','')],
       parking:[{text:'',done:false},{text:'',done:false}],
-      _u:0
+      _u:0,_layoutV2:true
     };
   }
   function defaultDateData(){
@@ -828,17 +832,47 @@ h1{
       end:typeof b.end==='string'?b.end:'',
       type:types.includes(b.type)?b.type:'',
       task:typeof b.task==='string'?b.task:'',
-      completion:typeof b.completion==='string'?b.completion:''
+      completion:typeof b.completion==='string'?b.completion:'',
+      status:b.status==='done'||b.status==='cancelled'?b.status:''
     })):fallback;
+    let blocksAM=cleanBlocks(loaded?.blocksAM,base.blocksAM);
+    let blocksPM=cleanBlocks(loaded?.blocksPM,base.blocksPM);
+    let migrated=false;
+    if(loaded && !loaded._layoutV2){
+      const legacySlots=mode==='work'?{
+        AM:[['10:00','10:20'],['10:20','11:00']],
+        PM:[['13:00','14:30'],['14:30','16:30'],['16:30','18:30'],['18:30','19:00']]
+      }:{
+        AM:[['10:00','10:20'],['10:20','11:00']],
+        PM:[['13:00','14:00'],['14:00','15:00'],['15:00','16:00'],['16:00','17:00'],['17:00','18:30'],['18:30','19:00']]
+      };
+      const migrateSection=(arr,section)=>{
+        const old=legacySlots[section];
+        const isOldTemplate=arr.length===old.length && arr.every((b,i)=>b.start===old[i][0] && b.end===old[i][1]);
+        const isPresetOps=b=>mode==='work' && b.type==='ops' && b.task==='운영 · 잡무' &&
+          !b.completion && !b.status && (
+            section==='AM' && b.start==='10:00' && b.end==='10:20' ||
+            section==='PM' && b.start==='18:30' && b.end==='19:00');
+        const withoutPreset=arr.filter(b=>!isPresetOps(b));
+        if(isOldTemplate){
+          const filled=withoutPreset.filter(b=>b.task.trim() || b.completion.trim() || b.type || b.status);
+          return filled.length?filled:[freshBlock(section==='AM'?'10:00':'13:00',section==='AM'?'11:00':'14:00')];
+        }
+        return withoutPreset.length?withoutPreset:[freshBlock(section==='AM'?'10:00':'13:00',section==='AM'?'11:00':'14:00')];
+      };
+      const nextAM=migrateSection(blocksAM,'AM'), nextPM=migrateSection(blocksPM,'PM');
+      migrated=JSON.stringify(nextAM)!==JSON.stringify(blocksAM) || JSON.stringify(nextPM)!==JSON.stringify(blocksPM);
+      blocksAM=nextAM; blocksPM=nextPM;
+    }
     return {
       goals:Array.isArray(loaded?.goals)&&loaded.goals.length===2?loaded.goals:base.goals,
-      blocksAM:cleanBlocks(loaded?.blocksAM,base.blocksAM),
-      blocksPM:cleanBlocks(loaded?.blocksPM,base.blocksPM),
+      blocksAM,blocksPM,
       parking:Array.isArray(loaded?.parking)&&loaded.parking.length?loaded.parking.map(p=>({
         text:typeof p.text==='string'?p.text:'',
         done:!!p.done
       })):base.parking,
-      _u:typeof loaded?._u==='number'?loaded._u:0
+      _u:migrated?Date.now():typeof loaded?._u==='number'?loaded._u:0,
+      _layoutV2:true
     };
   }
   function cleanLunch(loaded){
@@ -861,6 +895,7 @@ h1{
     if(storageOK){
       const raw=localStorage.getItem(key(currentDate));
       state=raw?sanitizeDateEntry(JSON.parse(raw)):defaultDateData();
+      if(raw) localStorage.setItem(key(currentDate),JSON.stringify(state));
     }else state=defaultDateData();
     render();
     if(gistConfigured()) pullAndMerge({silent:true});
@@ -1168,7 +1203,7 @@ h1{
 
   function makeBlock(mode,section,idx,b,number,readOnly){
     const div=document.createElement('div');
-    div.className='task-block'+(b.type?' type-'+b.type:'')+(readOnly?' read-only':'');
+    div.className='task-block'+(b.type?' type-'+b.type:'')+(readOnly?' read-only':'')+(b.status==='done'?' status-done':b.status==='cancelled'?' status-cancelled':'');
     div.dataset.kind='block';
     div.dataset.section=section;
     div.dataset.idx=idx;
@@ -1230,6 +1265,21 @@ h1{
     if(readOnly) ta.readOnly=true;
     else ta.oninput=()=>{arrFor(mode,section)[idx].task=ta.value;touchMode(mode)};
     div.appendChild(ta);
+
+    const statuses=document.createElement('div'); statuses.className='task-status';
+    [['done','완료'],['cancelled','취소']].forEach(([value,label])=>{
+      const option=document.createElement('label');
+      option.className='status-option'+(value==='cancelled'?' cancel':'');
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=b.status===value;
+      cb.setAttribute('aria-label',label+' 표시');
+      cb.onchange=()=>{
+        b.status=cb.checked?value:'';
+        touchMode(mode);
+        renderTimeline();
+      };
+      option.append(cb,document.createTextNode(label)); statuses.appendChild(option);
+    });
+    div.appendChild(statuses);
 
     if(completionTypes(mode).includes(b.type)){
       const comp=document.createElement('div'); comp.className='completion show';
@@ -1296,6 +1346,50 @@ h1{
 
           state[mode].blocksAM=before;
           state[mode].blocksPM=after;
+          // Match the moved block to its new neighbors without changing other blocks.
+          if(dragEl.dataset.kind==='block'){
+            const sequence=Array.from(containerEl.children).filter(el=>el.dataset.kind);
+            const position=sequence.indexOf(dragEl);
+            const originalSection=dragEl.dataset.section;
+            const originalIndex=Number(dragEl.dataset.idx);
+            const newSection=sequence.slice(0,position).some(el=>el.dataset.kind==='lunch')?'PM':'AM';
+            const newIndex=sequence.slice(0,position).filter(el=>el.dataset.kind==='block' &&
+              (newSection==='AM'||sequence.indexOf(el)>sequence.findIndex(item=>item.dataset.kind==='lunch'))).length;
+            const moved=dragEl.dataset.section==='AM'
+              ? oldAM[Number(dragEl.dataset.idx)] : oldPM[Number(dragEl.dataset.idx)];
+            const originalStart=moved.start, originalEnd=moved.end;
+            const previous=sequence[position-1], next=sequence[position+1];
+            const blockFor=(el)=>el.dataset.kind==='lunch'?state.lunch:
+              (el.dataset.section==='AM'?oldAM:oldPM)[Number(el.dataset.idx)];
+            const minutes=(s)=>/^\d{2}:\d{2}$/.test(s||'')?Number(s.slice(0,2))*60+Number(s.slice(3)):null;
+            const hhmm=(m)=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+            const duration=(minutes(originalEnd)??0)-(minutes(originalStart)??0);
+            const prevEnd=previous?blockFor(previous)?.end:null;
+            const nextStart=next?blockFor(next)?.start:null;
+            if(originalSection===newSection && originalIndex===newIndex){ /* No move: preserve manually entered times. */ }
+            else if(prevEnd && nextStart){
+              moved.start=prevEnd;
+              const from=minutes(prevEnd), to=minutes(nextStart);
+              moved.end=from!==null && to!==null && to<=from
+                ? hhmm(Math.min(23*60+59,from+(duration>0?duration:60))) : nextStart;
+              if(to!==null && from!==null && to<=from && next.dataset.kind==='block'){
+                const following=blockFor(next);
+                const followingDuration=(minutes(following.end)??0)-to;
+                following.start=moved.end;
+                const followingStart=minutes(moved.end);
+                following.end=hhmm(Math.min(23*60+59,followingStart+(followingDuration>0?followingDuration:60)));
+              }
+            }
+            else if(prevEnd){
+              moved.start=prevEnd;
+              const endMinutes=minutes(prevEnd);
+              if(endMinutes!==null) moved.end=hhmm(Math.min(23*60+59,endMinutes+(duration>0?duration:60)));
+            }else if(nextStart){
+              moved.end=nextStart;
+              const startMinutes=minutes(nextStart);
+              if(startMinutes!==null) moved.start=hhmm(Math.max(0,startMinutes-(duration>0?duration:60)));
+            }
+          }
           touchMode(mode);
           renderTimeline();
         }
@@ -1440,7 +1534,15 @@ h1{
   dateInput.onchange=e=>{save();currentDate=e.target.value||todayStr();load()};
   prevDay.onclick=()=>{save();currentDate=shiftDate(currentDate,-1);load()};
   nextDay.onclick=()=>{save();currentDate=shiftDate(currentDate,1);load()};
-  addBlock.onclick=()=>{ if(currentMode==='all') return; state[currentMode].blocksPM.push(freshBlock()); touchMode(currentMode); renderTimeline(); };
+  addBlock.onclick=()=>{
+    if(currentMode==='all') return;
+    const blocks=state[currentMode].blocksPM;
+    const last=blocks[blocks.length-1];
+    const start=/^([01]\d|2[0-3]):[0-5]\d$/.test(last?.end||'')?last.end:'13:00';
+    const endMinutes=Math.min(23*60+59,Number(start.slice(0,2))*60+Number(start.slice(3))+60);
+    const end=String(Math.floor(endMinutes/60)).padStart(2,'0')+':'+String(endMinutes%60).padStart(2,'0');
+    blocks.push(freshBlock(start,end)); touchMode(currentMode); renderTimeline();
+  };
 
   // ---------------- GitHub Gist sync ----------------
   function getCfg(){
@@ -1605,7 +1707,7 @@ h1{
       const local=collectAllLocal();
       const merged={};
       const allDates=new Set([...Object.keys(remote), ...Object.keys(local)]);
-      allDates.forEach(d=>{ merged[d]=mergeDateEntry(local[d], remote[d]); });
+      allDates.forEach(d=>{ merged[d]=sanitizeDateEntry(mergeDateEntry(local[d], remote[d])); });
 
       if(storageOK){
         Object.keys(merged).forEach(d=>{
