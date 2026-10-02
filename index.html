@@ -1614,6 +1614,12 @@ h1{
     if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value||'')) return null;
     return Number(value.slice(0,2))*60+Number(value.slice(3));
   }
+  function voiceDefaultStart(mode){
+    if(!['work','personal'].includes(mode)) return '';
+    const blocks=state[mode]?.blocksPM||[];
+    const last=blocks[blocks.length-1];
+    return voiceMinutes(last?.end)!==null?last.end:'13:00';
+  }
   function parseVoiceCommand(transcript,activeMode){
     const source=String(transcript||'').trim();
     const personal=/(?:^|\s)(?:개인(?:\s*할\s*일)?|퍼스널|personal)(?=\s|에|으로|$)/i.test(source);
@@ -1626,8 +1632,10 @@ h1{
 
     const timePattern=new RegExp('(오전|오후|저녁|밤|새벽|아침)?\\s*('+VOICE_NUMBER+')\\s*시(?!간)(?:\\s*(\\d{1,2})\\s*분|\\s*(반))?(?:\\s*(부터|까지|에|쯤))?','gi');
     const times=[];
-    let title=source.replace(timePattern,(whole,period,hour,minute,half,suffix)=>{
-      times.push({period:period||'',hour:voiceNumber(hour),minute:minute?Number(minute):half?30:0,suffix:suffix||''});
+    let title=source.replace(timePattern,(whole,period,hour,minute,half,suffix,offset)=>{
+      const following=source.slice(offset+whole.length);
+      times.push({period:period||'',hour:voiceNumber(hour),minute:minute?Number(minute):half?30:0,
+        suffix:suffix||'',endMarker:/^\s*(?:종료|끝나|끝내|마감|마쳐|끝)(?=\s|줘|기|$)/.test(following)});
       return ' ';
     });
     const durationPattern=new RegExp('('+VOICE_NUMBER+')\\s*시간(?:\\s*(반|\\d{1,2}\\s*분))?|((?:\\d{1,3}))\\s*분','gi');
@@ -1652,25 +1660,38 @@ h1{
       else return null;
       return voiceHHMM(hour*60+item.minute);
     }
-    const start=resolveTime(times[0],periodHint);
-    const interval=times.length>=2 && times[0].suffix==='부터' && times[1].suffix==='까지';
-    const end=interval?resolveTime(times[1],times[0].period||periodHint):
-      start&&duration!==null&&voiceMinutes(start)+duration<24*60?voiceHHMM(voiceMinutes(start)+duration):null;
-    if(interval && start && end) duration=voiceMinutes(end)-voiceMinutes(start);
+    const explicitEnd=times.length>=2 && (times[1].suffix==='까지'||times[1].endMarker);
+    const endOnly=times.length===1 && (times[0].suffix==='까지'||times[0].endMarker);
+    const useDefaultStart=!times.length && !/오전|오후|점심\s*이후|저녁|아침|새벽/.test(source);
+    const spokenStart=times.length && !endOnly?resolveTime(times[0],periodHint):null;
+    const spokenEnd=endOnly?resolveTime(times[0],periodHint):null;
+    const start=endOnly && spokenEnd && voiceMinutes(spokenEnd)-(duration||60)>=0?
+      voiceHHMM(voiceMinutes(spokenEnd)-(duration||60)):
+      times.length?spokenStart:
+      useDefaultStart?voiceDefaultStart(mode):null;
+    const end=endOnly?spokenEnd:explicitEnd?resolveTime(times[1],times[0].period||periodHint):
+      start&&voiceMinutes(start)+(duration||60)<24*60?voiceHHMM(voiceMinutes(start)+(duration||60)):null;
+    if(explicitEnd && start && end) duration=voiceMinutes(end)-voiceMinutes(start);
+    else if(duration===null) duration=60;
+    if(useDefaultStart && start) warnings.push('시작 시각을 말하지 않아 마지막 오후 블록의 종료 시각을 사용했습니다.');
+    if(endOnly && start) warnings.push('종료 시각을 기준으로 시작 시각을 '+(duration||60)+'분 전으로 설정했습니다.');
     if(times.length && !start) warnings.push('시작 시각의 오전/오후를 확인해 주세요.');
     if(!times.length && /오전|오후|점심\s*이후/.test(source)) warnings.push('시간대만 말한 경우 시각을 직접 선택해 주세요.');
-    if(start && !end) warnings.push('종료 시각 또는 소요시간을 선택해 주세요.');
+    if(start && !end) warnings.push('종료 시각을 확인해 주세요.');
     if(start && end && voiceMinutes(end)<=voiceMinutes(start)) warnings.push('종료 시각은 시작 시각보다 늦어야 합니다.');
 
     title=title.replace(/(?:^|\s)(?:개인\s*할\s*일|개인|퍼스널|personal|워크|work|업무|회사)(?:에|으로)(?=\s|$)/gi,' ')
       .replace(/^(?:개인\s*할\s*일|퍼스널|personal|워크|work)(?=\s|$)/i,' ')
       .replace(/점심\s*이후|(?:^|\s)(?:오전|오후|저녁|아침|새벽)(?=\s|$)/g,' ')
       .replace(/(?:일정\s*추가|추가해\s*줘|등록해\s*줘|넣어\s*줘|추가해줘|등록해줘|넣어줘)/g,' ')
+      .replace(/(?:^|\s)(?:종료|끝나|끝내|마감|마쳐|끝)(?=\s|$)/g,' ')
+      .replace(/\s+추가\s*$/g,' ')
       .replace(/(?:^|\s)할\s*일(?=\s|$)/g,' ')
       .replace(/(?:^|\s)(?:동안|부터|까지|에)(?=\s|$)/g,' ')
       .replace(/\s+/g,' ').trim();
     if(!title) warnings.push('업무명을 입력해 주세요.');
-    return {transcript:source,task:title,start:start||'',end:end||'',duration,mode,warnings};
+    return {transcript:source,task:title,start:start||'',end:end||'',duration,mode,warnings,
+      useDefaultStart,autoEnd:!explicitEnd&&!endOnly};
   }
 
   const voiceTrigger=document.getElementById('voiceTrigger');
@@ -1719,9 +1740,29 @@ h1{
       hint.hidden=!hint.textContent;
     }
     task.oninput=()=>{draft.task=task.value;refresh()};
-    start.oninput=()=>{draft.start=start.value;refresh()};
-    end.oninput=()=>{draft.end=end.value;refresh()};
-    mode.onchange=()=>{draft.mode=mode.value||null;refresh()};
+    start.oninput=()=>{
+      draft.start=start.value;draft.useDefaultStart=false;
+      if(draft.autoEnd){
+        const minute=voiceMinutes(draft.start);
+        draft.end=minute!==null && minute+(draft.duration||60)<24*60?voiceHHMM(minute+(draft.duration||60)):'';
+        end.value=draft.end;
+      }
+      refresh();
+    };
+    end.oninput=()=>{draft.end=end.value;draft.autoEnd=false;refresh()};
+    mode.onchange=()=>{
+      draft.mode=mode.value||null;
+      if(draft.useDefaultStart){
+        draft.start=voiceDefaultStart(draft.mode);
+        start.value=draft.start;
+        if(draft.autoEnd){
+          const minute=voiceMinutes(draft.start);
+          draft.end=minute!==null && minute+(draft.duration||60)<24*60?voiceHHMM(minute+(draft.duration||60)):'';
+          end.value=draft.end;
+        }
+      }
+      refresh();
+    };
     const actions=document.createElement('div'); actions.className='voice-actions';
     const register=document.createElement('button'); register.type='button'; register.className='primary'; register.textContent='등록';
     const modify=document.createElement('button'); modify.type='button'; modify.textContent='수정';
