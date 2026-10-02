@@ -826,7 +826,7 @@ h1{
         blocksAM:[freshBlock('10:00','11:00','','')],
         blocksPM:[freshBlock('13:00','14:00','','')],
         parking:[{text:'',done:false},{text:'',done:false}],
-        memo:'',
+        memo:'',_memoU:0,
         _u:0,_layoutV2:true
       };
     }
@@ -835,7 +835,7 @@ h1{
       blocksAM:[freshBlock('10:00','11:00','','')],
       blocksPM:[freshBlock('13:00','14:00','','')],
       parking:[{text:'',done:false},{text:'',done:false}],
-      memo:'',
+      memo:'',_memoU:0,
       _u:0,_layoutV2:true
     };
   }
@@ -909,6 +909,8 @@ h1{
         done:!!p.done
       })):base.parking,
       memo:typeof loaded?.memo==='string'?loaded.memo:'',
+      _memoU:typeof loaded?._memoU==='number'?loaded._memoU:
+        loaded?.memo && typeof loaded._u==='number'?loaded._u:0,
       _u:migrated?Date.now():typeof loaded?._u==='number'?loaded._u:0,
       _layoutV2:true
     };
@@ -956,6 +958,7 @@ h1{
 
   function touchLunch(){ state.lunch._u=Date.now(); scheduleSave(); }
   function touchMode(mode){ state[mode]._u=Date.now(); scheduleSave(); }
+  function touchMemo(mode){ state[mode]._memoU=Date.now(); scheduleSave(); }
 
   // ---------------- small anchored clock-style time picker ----------------
   let activeTimePop=null, activeTimePopCleanup=null;
@@ -1183,7 +1186,7 @@ h1{
         input.placeholder='자유롭게 메모를 적어보세요'; input.value=memo;
         input.setAttribute('aria-label',modeName(mode)+' 메모');
         const grow=()=>{ input.style.height='auto'; input.style.height=Math.max(120,input.scrollHeight)+'px'; };
-        input.addEventListener('input',()=>{state[mode].memo=input.value;grow();touchMode(mode)});
+        input.addEventListener('input',()=>{state[mode].memo=input.value;grow();touchMemo(mode)});
         card.appendChild(input);
         requestAnimationFrame(grow);
       }
@@ -2029,13 +2032,23 @@ h1{
     if(!a) return b; if(!b) return a;
     return (a._u||0) >= (b._u||0) ? a : b;
   }
+  function mergeModeData(local,remote){
+    if(!local) return remote; if(!remote) return local;
+    const memoVersion=value=>typeof value?._memoU==='number'?value._memoU:
+      value?.memo && typeof value._u==='number'?value._u:0;
+    const hasMemo=value=>typeof value?.memo==='string';
+    const memoSource=!hasMemo(local)?remote:!hasMemo(remote)?local:
+      memoVersion(local)>=memoVersion(remote)?local:remote;
+    return {...newerOf(local,remote),memo:hasMemo(memoSource)?memoSource.memo:'',
+      _memoU:memoVersion(memoSource)};
+  }
   function mergeDateEntry(local, remote){
     if(!local) return remote;
     if(!remote) return local;
     return {
       lunch: newerOf(local.lunch, remote.lunch),
-      work: newerOf(local.work, remote.work),
-      personal: newerOf(local.personal, remote.personal)
+      work: mergeModeData(local.work, remote.work),
+      personal: mergeModeData(local.personal, remote.personal)
     };
   }
 
@@ -2075,6 +2088,8 @@ h1{
     if(!opts.silent) setStatus('불러오는 중…');
     try{
       const remote=await gistGet(cfg.token, cfg.gistId);
+      // Include edits still waiting for the local save timer, including edits made during the request.
+      save();
       const local=collectAllLocal();
       const merged={};
       const allDates=new Set([...Object.keys(remote), ...Object.keys(local)]);
@@ -2086,19 +2101,11 @@ h1{
         });
       }
 
-      let changedCurrent=false;
       const cur=merged[currentDate];
-      if(cur){
-        ['lunch','work','personal'].forEach(k=>{
-          const incoming=cur[k];
-          if(incoming && incoming._u !== (state[k]||{})._u){
-            changedCurrent=true;
-          }
-        });
-        if(changedCurrent){
-          state=sanitizeDateEntry(cur);
-          render();
-        }
+      const changedCurrent=!!cur && JSON.stringify(cur)!==JSON.stringify(state);
+      if(changedCurrent){
+        state=cur;
+        render();
       }
       if(!opts.silent) setStatus('동기화 완료' + (changedCurrent ? ' (최신 데이터 반영됨)' : ''));
       return merged;
@@ -2113,7 +2120,9 @@ h1{
     const cfg=getCfg();
     if(!cfg || !cfg.token || !cfg.gistId) return;
     try{
-      const bundle=collectAllLocal();
+      // Merge the latest remote notes before uploading this device's schedule.
+      const bundle=await pullAndMerge({silent:true});
+      if(!bundle) return;
       await gistPut(cfg.token, cfg.gistId, bundle);
       syncToggle.classList.remove('error');
     }catch(e){
