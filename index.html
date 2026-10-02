@@ -648,6 +648,34 @@ h1{
 .task-block.status-done,.task-block.status-done.read-only{background:#f0f8f1;border-color:#a8cdb4}
 .task-block.status-cancelled,.task-block.status-cancelled.read-only{background:#f3f1ee;border-color:#cdc5bf}
 
+.memo-area{display:grid;gap:14px;margin-top:16px}
+.memo-area:empty{display:none}
+.memo-area.all{grid-template-columns:repeat(2,minmax(0,1fr))}
+.memo-card h2{font-size:15px;margin-bottom:10px}
+.memo-input{display:block;width:100%;min-height:120px;overflow:hidden;resize:none;border:1px solid var(--line);border-radius:10px;background:#faf8f4;color:var(--ink);font-family:inherit;font-size:15px;line-height:1.55;padding:12px;white-space:pre-wrap}
+.memo-input:focus{outline:none;border-color:#6d9d8c;box-shadow:0 0 0 3px rgba(47,103,87,.09)}
+.memo-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;font-size:15px;color:var(--ink)}
+@media(max-width:880px){.memo-area.all{grid-template-columns:1fr}}
+
+.voice-area{margin-top:10px}
+.voice-trigger{border:1px solid #c9d8cf;border-radius:9px;background:#f5faf6;color:#285d49;padding:8px 12px;font:700 13px inherit;cursor:pointer}
+.voice-trigger.listening{background:#dff2e6;border-color:#64a882;box-shadow:0 0 0 3px rgba(71,157,105,.12)}
+.voice-status{display:inline-block;margin-left:9px;color:var(--soft);font-size:12px;line-height:1.4}
+.voice-status.error{color:#a53e37}
+.voice-review{margin-top:9px;max-width:650px}
+.voice-review[hidden],.voice-edit[hidden]{display:none}
+.voice-quoted{margin:3px 0 10px;color:var(--soft);font-size:13px;overflow-wrap:anywhere}
+.voice-summary{display:grid;gap:3px;margin-bottom:9px;font-size:14px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.voice-hint{color:#a04c39;font-size:12px;margin:5px 0 8px}
+.voice-actions{display:flex;gap:7px;flex-wrap:wrap}
+.voice-actions button{border:1px solid var(--line);border-radius:8px;padding:7px 13px;background:#faf8f4;color:var(--ink);font:700 12px inherit;cursor:pointer}
+.voice-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.voice-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 10px}
+.voice-edit label{display:grid;gap:4px;color:var(--soft);font-size:12px;font-weight:700}
+.voice-edit label:first-child{grid-column:1/-1}
+.voice-edit input,.voice-edit select{width:100%;min-width:0;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font:14px inherit;padding:8px}
+@media(max-width:520px){.voice-edit{grid-template-columns:1fr}.voice-edit label:first-child{grid-column:auto}}
+
 /* mobile polish */
 @media(max-width:880px){
   .wrap{padding:10px 10px 34px}
@@ -710,6 +738,12 @@ h1{
     </div>
   </div>
 
+  <div class="voice-area">
+    <button type="button" class="voice-trigger" id="voiceTrigger" aria-pressed="false">🎤 말해서 일정 추가</button>
+    <span class="voice-status" id="voiceStatus" role="status" aria-live="polite"></span>
+    <div class="card voice-review" id="voiceReview" hidden></div>
+  </div>
+
   <div class="layout">
 
     <div class="timeline-section timeline">
@@ -738,6 +772,7 @@ h1{
     </div>
 
   </div>
+  <div class="memo-area" id="memoWrap"></div>
 </div>
 
 <script>
@@ -791,6 +826,7 @@ h1{
         blocksAM:[freshBlock('10:00','11:00','','')],
         blocksPM:[freshBlock('13:00','14:00','','')],
         parking:[{text:'',done:false},{text:'',done:false}],
+        memo:'',
         _u:0,_layoutV2:true
       };
     }
@@ -799,6 +835,7 @@ h1{
       blocksAM:[freshBlock('10:00','11:00','','')],
       blocksPM:[freshBlock('13:00','14:00','','')],
       parking:[{text:'',done:false},{text:'',done:false}],
+      memo:'',
       _u:0,_layoutV2:true
     };
   }
@@ -871,6 +908,7 @@ h1{
         text:typeof p.text==='string'?p.text:'',
         done:!!p.done
       })):base.parking,
+      memo:typeof loaded?.memo==='string'?loaded.memo:'',
       _u:migrated?Date.now():typeof loaded?._u==='number'?loaded._u:0,
       _layoutV2:true
     };
@@ -1073,7 +1111,8 @@ h1{
     const goalsFilled=['work','personal'].some(m=>state[m].goals.some(hasText));
     const blocksFilled=['work','personal'].some(m=>['blocksAM','blocksPM'].some(sec=>state[m][sec].some(b=>hasText(b.task))));
     const todoFilled=['work','personal'].some(m=>state[m].parking.some(p=>hasText(p.text)));
-    return goalsFilled||blocksFilled||todoFilled;
+    const memoFilled=['work','personal'].some(m=>hasText(state[m].memo));
+    return goalsFilled||blocksFilled||todoFilled||memoFilled;
   }
 
   // ---------------- mode toggle ----------------
@@ -1122,6 +1161,34 @@ h1{
     renderGoals();
     renderLegend();
     renderParking();
+    renderMemo();
+  }
+
+  function renderMemo(){
+    const wrap=document.getElementById('memoWrap');
+    wrap.innerHTML='';
+    wrap.classList.toggle('all',currentMode==='all');
+    const modes=currentMode==='all'?['work','personal']:[currentMode];
+    modes.forEach(mode=>{
+      const memo=state[mode].memo||'';
+      if(currentMode==='all' && !hasText(memo)) return;
+      const card=document.createElement('section'); card.className='card memo-card';
+      const title=document.createElement('h2'); title.textContent=modeName(mode)+' 메모';
+      card.appendChild(title);
+      if(currentMode==='all'){
+        const content=document.createElement('div'); content.className='memo-text';
+        content.textContent=memo; card.appendChild(content);
+      }else{
+        const input=document.createElement('textarea'); input.className='memo-input';
+        input.placeholder='자유롭게 메모를 적어보세요'; input.value=memo;
+        input.setAttribute('aria-label',modeName(mode)+' 메모');
+        const grow=()=>{ input.style.height='auto'; input.style.height=Math.max(120,input.scrollHeight)+'px'; };
+        input.addEventListener('input',()=>{state[mode].memo=input.value;grow();touchMode(mode)});
+        card.appendChild(input);
+        requestAnimationFrame(grow);
+      }
+      wrap.appendChild(card);
+    });
   }
 
   function arrFor(mode,section){ return state[mode][section==='AM'?'blocksAM':'blocksPM']; }
@@ -1529,6 +1596,269 @@ h1{
     card.appendChild(list);
     return card;
   }
+
+  // ---------------- browser voice input and local command parser ----------------
+  const VOICE_NUMBER_WORDS={
+    '한':1,'하나':1,'두':2,'둘':2,'세':3,'셋':3,'네':4,'넷':4,
+    '다섯':5,'여섯':6,'일곱':7,'여덟':8,'아홉':9,'열':10,'열한':11,'열두':12,
+    '스물':20,'스물한':21,'스물두':22,'스물세':23
+  };
+  const VOICE_NUMBER='(?:스물한|스물두|스물세|열한|열두|다섯|여섯|일곱|여덟|아홉|스물|하나|둘|셋|넷|열|한|두|세|네|\\d{1,3})';
+  function voiceNumber(value){
+    return /^\d+$/.test(value)?Number(value):VOICE_NUMBER_WORDS[value];
+  }
+  function voiceHHMM(total){
+    return String(Math.floor(total/60)).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+  }
+  function voiceMinutes(value){
+    if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value||'')) return null;
+    return Number(value.slice(0,2))*60+Number(value.slice(3));
+  }
+  function parseVoiceCommand(transcript,activeMode){
+    const source=String(transcript||'').trim();
+    const personal=/(?:^|\s)(?:개인(?:\s*할\s*일)?|퍼스널|personal)(?=\s|에|으로|$)/i.test(source);
+    const work=/(?:^|\s)(?:업무|회사|워크|work)(?=\s|에|으로|$)/i.test(source);
+    let mode=personal&&!work?'personal':work&&!personal?'work':
+      personal&&work?null:(activeMode==='all'?null:activeMode);
+    const warnings=[];
+    if(personal&&work) warnings.push('Work와 Personal이 함께 언급되었습니다. 구분을 선택해 주세요.');
+    if(!mode) warnings.push('Work / Personal을 선택해 주세요.');
+
+    const timePattern=new RegExp('(오전|오후|저녁|밤|새벽|아침)?\\s*('+VOICE_NUMBER+')\\s*시(?!간)(?:\\s*(\\d{1,2})\\s*분|\\s*(반))?(?:\\s*(부터|까지|에|쯤))?','gi');
+    const times=[];
+    let title=source.replace(timePattern,(whole,period,hour,minute,half,suffix)=>{
+      times.push({period:period||'',hour:voiceNumber(hour),minute:minute?Number(minute):half?30:0,suffix:suffix||''});
+      return ' ';
+    });
+    const durationPattern=new RegExp('('+VOICE_NUMBER+')\\s*시간(?:\\s*(반|\\d{1,2}\\s*분))?|((?:\\d{1,3}))\\s*분','gi');
+    let duration=null;
+    title=title.replace(durationPattern,(whole,hours,extra,onlyMinutes)=>{
+      const value=onlyMinutes?Number(onlyMinutes):voiceNumber(hours)*60+(extra?(extra==='반'?30:Number(extra.replace(/\D/g,''))):0);
+      if(duration===null && Number.isFinite(value) && value>0) duration=value;
+      return ' ';
+    });
+
+    const periodHint=times[0]?.period || (/저녁|밤/.test(source)?'저녁':/오후|점심\s*이후/.test(source)?'오후':/오전|아침|새벽/.test(source)?'오전':'');
+    function resolveTime(item,inherited){
+      if(!item || !Number.isInteger(item.hour) || !Number.isInteger(item.minute) || item.minute>59) return null;
+      let hour=item.hour;
+      const period=item.period||inherited;
+      if(hour>23) return null;
+      if(hour>=13) return voiceHHMM(hour*60+item.minute);
+      if(period==='오후'||period==='저녁'||period==='밤') hour=hour===12?12:hour+12;
+      else if(period==='오전'||period==='아침'||period==='새벽')
+        hour=hour===12?(item.period?0:12):hour;
+      else if(hour>=8 && hour<=11 || hour===0 || hour===12) { /* conventional daytime hour */ }
+      else return null;
+      return voiceHHMM(hour*60+item.minute);
+    }
+    const start=resolveTime(times[0],periodHint);
+    const interval=times.length>=2 && times[0].suffix==='부터' && times[1].suffix==='까지';
+    const end=interval?resolveTime(times[1],times[0].period||periodHint):
+      start&&duration!==null&&voiceMinutes(start)+duration<24*60?voiceHHMM(voiceMinutes(start)+duration):null;
+    if(interval && start && end) duration=voiceMinutes(end)-voiceMinutes(start);
+    if(times.length && !start) warnings.push('시작 시각의 오전/오후를 확인해 주세요.');
+    if(!times.length && /오전|오후|점심\s*이후/.test(source)) warnings.push('시간대만 말한 경우 시각을 직접 선택해 주세요.');
+    if(start && !end) warnings.push('종료 시각 또는 소요시간을 선택해 주세요.');
+    if(start && end && voiceMinutes(end)<=voiceMinutes(start)) warnings.push('종료 시각은 시작 시각보다 늦어야 합니다.');
+
+    title=title.replace(/(?:^|\s)(?:개인\s*할\s*일|개인|퍼스널|personal|워크|work|업무|회사)(?:에|으로)(?=\s|$)/gi,' ')
+      .replace(/^(?:개인\s*할\s*일|퍼스널|personal|워크|work)(?=\s|$)/i,' ')
+      .replace(/점심\s*이후|(?:^|\s)(?:오전|오후|저녁|아침|새벽)(?=\s|$)/g,' ')
+      .replace(/(?:일정\s*추가|추가해\s*줘|등록해\s*줘|넣어\s*줘|추가해줘|등록해줘|넣어줘)/g,' ')
+      .replace(/(?:^|\s)할\s*일(?=\s|$)/g,' ')
+      .replace(/(?:^|\s)(?:동안|부터|까지|에)(?=\s|$)/g,' ')
+      .replace(/\s+/g,' ').trim();
+    if(!title) warnings.push('업무명을 입력해 주세요.');
+    return {transcript:source,task:title,start:start||'',end:end||'',duration,mode,warnings};
+  }
+
+  const voiceTrigger=document.getElementById('voiceTrigger');
+  const voiceStatus=document.getElementById('voiceStatus');
+  const voiceReview=document.getElementById('voiceReview');
+  let voiceRecognizer=null;
+  let voiceDraft=null;
+  let voiceStopTimer=null;
+  let voicePermissionPending=false;
+  let voiceAttempt=0;
+  function voiceMessage(message,error){
+    voiceStatus.textContent=message;
+    voiceStatus.classList.toggle('error',!!error);
+  }
+  function voiceListening(active){
+    voiceTrigger.classList.toggle('listening',active);
+    voiceTrigger.setAttribute('aria-pressed',String(active));
+    voiceTrigger.textContent=active?'🎤 듣는 중...':'🎤 말해서 일정 추가';
+  }
+  function showVoiceReview(draft){
+    voiceDraft=draft;
+    voiceReview.innerHTML=''; voiceReview.hidden=false;
+    const heading=document.createElement('h2'); heading.textContent='음성 일정 확인';
+    const said=document.createElement('p'); said.className='voice-quoted'; said.textContent='사용자 음성: “'+draft.transcript+'”';
+    const summary=document.createElement('div'); summary.className='voice-summary';
+    const hint=document.createElement('p'); hint.className='voice-hint';
+    const edit=document.createElement('div'); edit.className='voice-edit'; edit.hidden=true;
+    const field=(label,element)=>{
+      const holder=document.createElement('label'); holder.textContent=label; holder.appendChild(element);
+      edit.appendChild(holder); return element;
+    };
+    const task=field('업무명',document.createElement('input')); task.type='text'; task.value=draft.task;
+    const start=field('시작',document.createElement('input')); start.type='time'; start.value=draft.start;
+    const end=field('종료',document.createElement('input')); end.type='time'; end.value=draft.end;
+    const mode=field('구분',document.createElement('select'));
+    [['','선택해 주세요'],['work','Work'],['personal','Personal']].forEach(([value,name])=>{
+      const option=document.createElement('option'); option.value=value; option.textContent=name; mode.appendChild(option);
+    });
+    mode.value=draft.mode||'';
+    function refresh(){
+      const length=voiceMinutes(draft.start)!==null && voiceMinutes(draft.end)!==null ? voiceMinutes(draft.end)-voiceMinutes(draft.start):null;
+      summary.textContent='인식 결과:\n'+(draft.task||'업무명 선택 필요')+'\n'+
+        (draft.start||'시작 선택 필요')+' ~ '+(draft.end||'종료 선택 필요')+
+        (length>0?' ('+length+'분)':'')+'\n'+(draft.mode?modeName(draft.mode):'Work / Personal 선택 필요');
+      hint.textContent=draft.warnings.join(' ');
+      hint.hidden=!hint.textContent;
+    }
+    task.oninput=()=>{draft.task=task.value;refresh()};
+    start.oninput=()=>{draft.start=start.value;refresh()};
+    end.oninput=()=>{draft.end=end.value;refresh()};
+    mode.onchange=()=>{draft.mode=mode.value||null;refresh()};
+    const actions=document.createElement('div'); actions.className='voice-actions';
+    const register=document.createElement('button'); register.type='button'; register.className='primary'; register.textContent='등록';
+    const modify=document.createElement('button'); modify.type='button'; modify.textContent='수정';
+    const cancel=document.createElement('button'); cancel.type='button'; cancel.textContent='취소';
+    modify.onclick=()=>{edit.hidden=false;task.focus()};
+    cancel.onclick=()=>{voiceReview.hidden=true;voiceReview.innerHTML='';voiceDraft=null;voiceMessage('등록을 취소했습니다.',false)};
+    register.onclick=()=>{
+      const startMinute=voiceMinutes(draft.start), endMinute=voiceMinutes(draft.end);
+      if(!draft.task.trim() || !['work','personal'].includes(draft.mode) || startMinute===null || endMinute===null || endMinute<=startMinute){
+        edit.hidden=false;
+        voiceMessage('업무명, 구분, 시작·종료 시각을 확인해 주세요.',true);
+        return;
+      }
+      if(draft.date!==currentDate){voiceMessage('날짜가 변경되었습니다. 현재 날짜에서 다시 음성 입력해 주세요.',true);return;}
+      const modeToAdd=draft.mode;
+      const section=draft.start<'12:00'?'AM':'PM';
+      const blocks=arrFor(modeToAdd,section);
+      blocks.push(freshBlock(draft.start,draft.end,'',draft.task.trim()));
+      blocks.sort((a,b)=>a.start.localeCompare(b.start));
+      touchMode(modeToAdd);
+      if(currentMode!=='all' && currentMode!==modeToAdd){
+        currentMode=modeToAdd;
+        try{localStorage.setItem(MODE_KEY,currentMode)}catch(e){}
+      }
+      render();
+      voiceReview.hidden=true;voiceReview.innerHTML='';voiceDraft=null;
+      voiceMessage(modeName(modeToAdd)+'에 일정이 등록되었습니다.',false);
+    };
+    actions.append(register,modify,cancel);
+    voiceReview.append(heading,said,summary,hint,edit,actions);
+    refresh();
+    if(!draft.task || !draft.start || !draft.end || !draft.mode) edit.hidden=false;
+  }
+  voiceTrigger.onclick=async()=>{
+    if(voicePermissionPending){
+      voiceAttempt++;
+      voicePermissionPending=false;
+      voiceListening(false);
+      voiceMessage('마이크 권한 요청을 중단했습니다.',false);
+      return;
+    }
+    if(voiceRecognizer){
+      const active=voiceRecognizer;
+      try{active.stop();voiceMessage('인식을 종료하는 중...',false)}
+      catch(e){voiceRecognizer=null;voiceListening(false);voiceMessage('음성 입력을 종료했습니다.',false);return}
+      clearTimeout(voiceStopTimer);
+      voiceStopTimer=setTimeout(()=>{
+        if(voiceRecognizer===active){
+          voiceRecognizer=null;voiceListening(false);
+          voiceMessage('음성 입력을 종료했습니다. 다시 시도할 수 있습니다.',false);
+        }
+      },1500);
+      return;
+    }
+    const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!Recognition){
+      voiceMessage('현재 브라우저에서는 음성 입력을 지원하지 않습니다. Chrome 계열 브라우저 사용을 권장합니다.',true);
+      return;
+    }
+    const attempt=++voiceAttempt;
+    voicePermissionPending=true;
+    voiceTrigger.textContent='🎤 마이크 권한 확인 중...';
+    voiceTrigger.setAttribute('aria-pressed','true');
+    voiceMessage('브라우저의 마이크 사용 허용 창을 확인해 주세요. 다시 누르면 입력을 중단합니다.',false);
+    try{
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        throw new Error('microphone-api-unavailable');
+      }
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      stream.getTracks().forEach(track=>track.stop());
+      if(attempt!==voiceAttempt) return;
+      voicePermissionPending=false;
+    }catch(error){
+      if(attempt!==voiceAttempt) return;
+      voicePermissionPending=false;
+      voiceListening(false);
+      const blocked=error.name==='NotAllowedError'||error.name==='PermissionDeniedError'||error.name==='SecurityError';
+      const message=error.message==='microphone-api-unavailable'?
+        '현재 화면에서는 마이크 권한 요청을 사용할 수 없습니다. HTTPS 페이지를 Chrome에서 직접 열어 주세요.':
+        blocked?'브라우저가 마이크 사용을 거부했습니다. 이 페이지를 Chrome에서 직접 열어 사이트의 마이크 권한을 확인해 주세요.':
+        error.name==='NotFoundError'?'사용할 수 있는 마이크가 없습니다. 기기의 마이크 설정을 확인해 주세요.':
+        '마이크를 열지 못했습니다. 브라우저나 기기의 마이크 설정을 확인해 주세요.';
+      voiceMessage(message,true);
+      return;
+    }
+    let recognizer;
+    try{
+      recognizer=new Recognition();
+      recognizer.lang='ko-KR'; recognizer.interimResults=true; recognizer.continuous=false;
+      let finalText='',interimText='';
+      let failed=false;
+      const tabAtStart=currentMode, dateAtStart=currentDate;
+      recognizer.onstart=()=>{if(!failed && voiceRecognizer===recognizer){voiceListening(true);voiceMessage('🎤 듣는 중...',false)}};
+      recognizer.onresult=e=>{
+        finalText='';interimText='';
+        for(let i=0;i<e.results.length;i++){
+          const part=e.results[i][0]?.transcript||'';
+          if(e.results[i].isFinal) finalText+=part+' ';
+          else interimText+=part+' ';
+        }
+        voiceMessage('🎤 듣는 중... '+(finalText||interimText).trim(),false);
+      };
+      recognizer.onerror=e=>{
+        failed=true;
+        clearTimeout(voiceStopTimer);
+        if(voiceRecognizer===recognizer) voiceRecognizer=null;
+        voiceListening(false);
+        const message=e.error==='not-allowed'||e.error==='service-not-allowed'?
+          '마이크 권한이 차단되었습니다. 브라우저의 사이트 설정에서 이 페이지의 마이크를 허용한 뒤 다시 시도해 주세요.':
+          e.error==='no-speech'?'음성이 들리지 않았습니다. 다시 시도해 주세요.':
+          '음성 인식 오류가 발생했습니다: '+e.error;
+        voiceMessage(message,true);
+        try{recognizer.abort()}catch(ignore){}
+      };
+      recognizer.onend=()=>{
+        clearTimeout(voiceStopTimer);
+        if(failed) return;
+        if(voiceRecognizer===recognizer) voiceRecognizer=null;
+        voiceListening(false);
+        if(finalText.trim()){
+          const parsed=parseVoiceCommand(finalText.trim(),tabAtStart);
+          parsed.date=dateAtStart;
+          showVoiceReview(parsed);
+          voiceMessage('인식 결과를 확인한 뒤 등록해 주세요.',false);
+        }else if(!voiceStatus.classList.contains('error')) voiceMessage('인식된 음성이 없습니다. 다시 시도해 주세요.',true);
+      };
+      voiceRecognizer=recognizer;
+      voiceTrigger.textContent='🎤 마이크 연결 중...';
+      voiceTrigger.setAttribute('aria-pressed','true');
+      voiceMessage('마이크 권한을 요청하는 중입니다.',false);
+      recognizer.start();
+      voiceReview.hidden=true;
+    }catch(e){
+      voiceRecognizer=null;voiceListening(false);
+      voiceMessage('음성 인식을 시작하지 못했습니다. 마이크 권한을 확인해 주세요.',true);
+    }
+  };
 
   // ---------------- static controls ----------------
   dateInput.onchange=e=>{save();currentDate=e.target.value||todayStr();load()};
